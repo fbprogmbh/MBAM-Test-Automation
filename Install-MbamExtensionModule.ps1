@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
 
 <#
-    FB Pro Gmbh | install-MbamExtensionModule.ps1
+    FB Pro Gmbh | Install-MbamExtensionModule.ps1
     Author(s):        Dennis Esly 
     Date:             02/27/2017
     Last change:      05/02/2017
