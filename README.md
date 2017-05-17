@@ -68,6 +68,8 @@ $mbamVersion = "2.5.1133.0"
 $reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%m%d_%H%M") 
 ```
 
+The same applies for the script *Get-CompleteClientStatus.ps1* for creating a HTML-report on a client. Set your MBAM Client Agent version, adjust the save path for your reports and you are ready to go. Remember you have to do the same as you did for the server reports, which means copy the package to the client, install the module and set your execution policy.   
+
 ### Build your own ###
 
 If you have no use or just do not like the html report scripts, you can build and run your own script and export or save it to any format you like. To do so you find a bunch of *Test-* functions to use in your script and suit your need.
