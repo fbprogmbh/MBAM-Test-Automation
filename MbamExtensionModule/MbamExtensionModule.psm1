@@ -27,9 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <#
 
-    Author(s):        Dennis Esly 
+    Author(s):        Dennis Esly
     Date:             12/23/2016
-    Last change:      05/02/2017
+    Last change:      05/18/2017
     Version:          0.8
 
 #>
@@ -514,9 +514,7 @@ function Test-SystemRestartMayBeNescessary
 
     # If we have a pending reboot, system definitely has to restart
     if (Get-PendingReboot)
-    { 
-        Write-Output "yes" 
-    }
+    { Write-Output "yes" }
 
     # Otherwise check, if there are updates to install within the next $withDays
     else
@@ -525,12 +523,8 @@ function Test-SystemRestartMayBeNescessary
         {
             $date = (Get-Date).AddDays($withinDays)
         
-            # ugly bugfix => return. has to be recoded
-            $result = Get-CimInstance -Namespace 'root\ccm\ClientSDK' -ClassName 'CCM_SoftwareUpdate' -ErrorAction Stop `
-            | select -ExpandProperty Deadline `            | ForEach-Object { if ($_.Deadline -le $date) { return "yes" } }
-
-            # If result is $null, no updates are found
-            if ($result -eq $null) { Write-Output "no"}
+            Get-CimInstance -Namespace 'root\ccm\ClientSDK' -ClassName 'CCM_SoftwareUpdate' -ErrorAction Stop `
+            | select -ExpandProperty Deadline `            | ForEach-Object { if ($_.Deadline -le $date) { Write-Output "yes" } else { Write-Output "no" } }
 
         }
         catch
@@ -1697,28 +1691,30 @@ function Test-LocalAdmins
             if ($member.SideIndicator -eq "<=")
             {
                 $unexpected += $member.InputObject + $nl
+                $unexpectedCounter++
             }
             elseif ($member.SideIndicator -eq "=>")
             {
                 $missing += $member.InputObject + $nl
+                $missingCounter++
             }
         }
 
         if ($missing -and $unexpected)    
         {
-            $obj | Add-Member NoteProperty Status("Not listed members found ("+$unexpected.count+"): $nl $unexpected $nl Missing members("+$missing.count+"): $nl $missing")
+            $obj | Add-Member NoteProperty Status("Not listed members found ($unexpectedCounter): $nl $unexpected $nl Missing members($missingCounter): $nl $missing")
             $obj | Add-Member NoteProperty Passed("false")
             Write-LogFile -Path $LogPath -name $LogName -message "Local admins - not listed members found: $unexpected $nl Missing members: $missing" -Level Error
         }
         elseif ($unexpected) 
         {
-            $obj | Add-Member NoteProperty Status("Not listed members found("+$unexpected.count+"): $nl $unexpected")
+            $obj | Add-Member NoteProperty Status("Not listed members found($unexpectedCounter): $nl $unexpected")
             $obj | Add-Member NoteProperty Passed("false") 
             Write-LogFile -Path $LogPath -name $LogName -message "Local admins - not listed members found: $unexpected" -Level Error   
         }
         elseif ($missing)
         {
-            $obj | Add-Member NoteProperty Status("Missing members("+$missing.count+"): $nl $missing")
+            $obj | Add-Member NoteProperty Status("Missing members($missingCounter): $nl $missing")
             $obj | Add-Member NoteProperty Passed("warning")
             Write-LogFile -Path $LogPath -name $LogName -message "Local admins - missing members: $missing" -Level Warning
         }
@@ -1740,7 +1736,7 @@ function Test-LocalAdmins
 
 function Test-SccmClientUpdates
 {
-# TC-Mbam-0042
+# TC-Mbam-0043
 #-------------
 
 <#
@@ -3777,23 +3773,16 @@ function Test-MbamGpos
     {
         [xml]$xml = Get-Content $source -ErrorAction Stop
 
-        $i = 1
 
         foreach($policy in $xml.GPO.Policy)
         {
-        if($policy.PolicyState -eq 'enabled')
-        {
-            $obj = New-Object PSObject
-            $obj | Add-Member NoteProperty Name("TC-Mbam-0027.$i")
-            $obj | Add-Member NoteProperty Task("GPO: "+$policy.PolicyName)
+            if($policy.PolicyState -eq 'enabled')
+            {
+                $obj = New-Object PSObject
+                $obj | Add-Member NoteProperty Name("TC-Mbam-0027."+$policy.PolicyID)
+                $obj | Add-Member NoteProperty Task("GPO: "+$policy.PolicyName)
 
-            if ($policy.PolicyPath -like "Not implemented yet")
-            {
-                $obj | Add-Member NoteProperty Status("Not implemented yet")
-                $obj | Add-Member NoteProperty Passed("warning")
-            }
-            else
-            {
+
                 try 
                 {
                     if (Get-MbamGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop)
@@ -3811,13 +3800,12 @@ function Test-MbamGpos
                 {
                     $obj | Add-Member NoteProperty Status("Policy not applied")
                     $obj | Add-Member NoteProperty Passed("false")
-                }
-            }
+                }            
                 
-            Write-Output $obj
-            $i++
+                Write-Output $obj
+                $i++
+            }
         }
-    }
     }
     catch 
     {
@@ -4033,6 +4021,75 @@ function Test-MbamClient2ServerStatusReporting
     }
 
     Write-Output $obj
+}
+
+function Test-BitlockerDriverVersion
+{
+# TC-Mbam-0049
+#-------------
+
+<#
+.Synopsis 
+    Checks, if the BitLocker driver version is up to date.
+.DESCRIPTION
+    Checks, if the BitLocker driver version is up to date. At the moment this test only works for Windows 7 SP1 , 8.1 and 10.
+#>
+
+try
+{
+    $fileVersion = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo("c:\windows\system32\drivers\fvevol.sys").ProductVersion).replace(".","")
+    $osVersion = Get-CimInstance Win32_OperatingSystem | select -ExpandProperty Version
+}
+catch
+{
+    # log error
+    $msg = $_.Exception.toString()
+    $msg += "; " + $_.ScriptStackTrace.toString()
+    write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+}
+
+switch ($osVersion)
+{
+    "6.1.7601" { $expectedFileVersion = "61760123003"; break }
+    "6.3.9600" { $expectedFileVersion = "63960017031"; break }
+    "10.0.15063" { $expectedFileVersion = "100150630"; break }
+    default { $expectedFileVersion = "0"; break }
+}
+
+# Create the test result object
+$obj = New-Object PSObject
+$obj | Add-Member NoteProperty Name("TC-Mbam-0049")
+$obj | Add-Member NoteProperty Task("The BitLocker driver version is correct.")
+
+# Driver version matches
+if ($expectedFileVersion -eq $fileVersion)
+{
+    $obj | Add-Member NoteProperty Status("Driver is up to date.")
+    $obj | Add-Member NoteProperty Passed("true")
+}
+
+# Operating system not in the list
+elseif ($expectedFileVersion -eq 0)
+{
+    $obj | Add-Member NoteProperty Status("Operating system could not be identified.")
+    $obj | Add-Member NoteProperty Passed("false")
+}
+
+# A newer driver version is available
+elseif ($expectedFileVersion -gt $fileVersion)
+{
+    $obj | Add-Member NoteProperty Status("Driver version is older than expected.")
+    $obj | Add-Member NoteProperty Passed("warning")
+}
+
+# A driver version with a higher version number is already installed (
+elseif ($expectedFileVersion -lt $fileVersion)
+{
+    $obj | Add-Member NoteProperty Status("Driver version is higher than expected.")
+    $obj | Add-Member NoteProperty Passed("warning")
+}
+
+Write-Output $obj
 }
 
 

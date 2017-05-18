@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      05/15/2017
+    Last change:      05/18/2017
     Version:          1.0
 
 #>
@@ -88,6 +88,7 @@ $mbamSecurityStatus = @(
 $mbamApplicationStatus = @(
     Test-MbamClientSoftwareState
     Test-MbamClientAgentServiceState
+    Test-BitlockerDriverVersion
     Test-MbamClientAgentVersion $agentVersion
     Test-MbamClient2ServerStatusReporting
     Test-MbamClient2ServerKeyReporting
@@ -223,7 +224,7 @@ $report += "</body></html>"
 
 
 # Save the report 
-$report > $reportSavePath"MbamW_client_report_$fileDate.html"
+$report > $reportSavePath"Mbam_client_report_$fileDate.html"
 
 }
 catch 
