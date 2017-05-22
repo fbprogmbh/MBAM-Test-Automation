@@ -1,0 +1,1409 @@
+﻿<?xml version="1.0"?>
+<GPO>
+<!-- Main Settings -->
+	<Policy>
+		<!-- 1 = AES 128-bit with Diffuser; 2 = AES 256-bit with Diffuser; 3 = AES 128-bit (default); 4 = AES 256-bit -->
+        <PolicyName>Choose drive encryption method and cipher strengh</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>EncryptionMethod</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>1</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Prevent memory overwrite on restart</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>MorBehavior</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>2</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Standard object identifier = 1.3.6.1.4.1.311.67.1.1 -->
+        <PolicyName>Validate smart card certificate usage rule compliance</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>CertificateOID</PolicyKey>
+        <PolicyValue>1.3.6.1.4.1.311.67.1.1</PolicyValue>
+        <PolicyID>3</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Provide the unique identifiers for your organization</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>IdentificationField</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>4</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Value is a string -->
+        <PolicyName>Provide the unique identifiers for your organization - BitLocker identification field</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>IdentificationFieldString</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>5</PolicyID>
+    </Policy>
+    <Policy>
+ 		<!-- Value is a string -->
+        <PolicyName>Provide the unique identifiers for your organization - Allow BitLocker identification field</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>SecondaryIdentificationField</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>6</PolicyID>
+    </Policy>
+	<!-- Client Management -->
+	<!-- ################################## -->
+    <Policy>
+        <PolicyName>Configure MBAM services</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UseMBAMServices</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>7</PolicyID>
+    </Policy>
+    <Policy>
+         <!-- Policy value = URL to web-service -->
+        <PolicyName>Configure MBAM services - MBAM Recovery service endpoint</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>KeyRecoveryServiceEndPoint</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>8</PolicyID>
+    </Policy>
+    <!--BitLocker recovery information: 1 = Recovery password and key package; 0 = Recovery password only -->
+    <Policy>
+        <PolicyName>Configure MBAM services - Select BitLocker recovery information to store</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>KeyRecoveryOptions</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>9</PolicyID>
+    </Policy>
+    <Policy>
+        <PolicyName>Configure MBAM services - Enter client checking status frequency in (minutes)</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>ClientWakeupFrequency</PolicyKey>
+        <PolicyValue>90</PolicyValue>
+        <PolicyID>10</PolicyID>
+    </Policy>
+    <!-- Key Recovering -->
+    <Policy>
+        <PolicyName>Configure key recovery service</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UseKeyRecoveryService</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>11</PolicyID>
+    </Policy>    
+    <!-- Status Reporting -->
+    <Policy>
+        <PolicyName>Configure MBAM services - Configure MBAM Status reporting service</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UseStatusReportingService</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>12</PolicyID>
+    </Policy>
+    <Policy>
+        <!-- Policy value = URL to web-service -->
+        <PolicyName>Configure MBAM services - MBAM status reporting service endpoint</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>StatusReportingServiceEndpoint</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>13</PolicyID>
+    </Policy>
+    <Policy>
+        <PolicyName>Configure MBAM services - Enter status report frequency in (minutes)</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>StatusReportingFrequency</PolicyKey>
+        <PolicyValue>720</PolicyValue>
+        <PolicyID>14</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ --> 
+        <PolicyName>Allow user exemption</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>AllowUserExemption</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>15</PolicyID>
+    </Policy>
+    <Policy>
+        <PolicyName>Allow user exemption: Maximum days to postpone</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>MaxTimeToGetUserExemption</PolicyKey>
+        <PolicyValue>7</PolicyValue>
+        <PolicyID>16</PolicyID>
+    </Policy>   
+    <Policy>
+    	<!-- Message type: 0 = Provide a URL; 1 = Provide an email address; 2 = Provide a phone number or message -->
+        <PolicyName>Allow user exemption: Select the method of contacting users with instructions on how...</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UserExemptionMessageType</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>17</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Policy value is a string -->
+        <PolicyName>Allow user exemption: Enter the appropriate URL, e-mail address or phone number to contact the user ...</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UserExemptionMessage</PolicyKey>
+        <PolicyValue>34567</PolicyValue>
+        <PolicyID>18</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure customer experience improvement programm</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement\Configuration</PolicyPath>
+        <PolicyKey>CustomerExperienceImprovementProgram</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>19</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- PolicyValue = String -->
+        <PolicyName>Provide the URL for the Security Policy link</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>MoreInformationUrl</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>20</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure automatically resetting TPM lockouts</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>TpmLockoutAutoReset</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>21</PolicyID>
+    </Policy>
+
+    <!-- Fixed Drive-->
+    <Policy>
+  	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Fixed data drive encryption settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>ShouldEncryptFixedDataDrive</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>22</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = Do not allow Auto-Unlock;  1 = Require Auto-Unlock; 2 = Allow Auto-Unlock -->
+        <PolicyName>Fixed data drive encryption settings: This policy setting allows you to manage wether the fixed data drive...</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>AutoUnlockFixedDataDrive</PolicyKey>
+        <PolicyValue>2</PolicyValue>
+        <PolicyID>23</PolicyID>
+    </Policy>
+    <Policy>
+        <PolicyName>Deny write access to fixed drives not protected by BitLocker</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\System\CurrentControlSet\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVDenyWriteAccess</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>24</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- <none> = inactiv; FAT32 = activ -->
+        <PolicyName>Allow access to BitLocker-protected fixed data drives from earlier versions of Windows</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVDiscoveryVolumeType</PolicyKey>
+        <PolicyValue>FAT32</PolicyValue>
+        <PolicyID>25</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Allow access to BitLocker-protected fixed data drives from earlier versions of Windows: Do not install BitLocker To Go Reader on FAT formatted fixed drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVNoBitLockerToGoReader</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>26</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure use of passwords for fixed data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVPassphrase</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>27</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure use of passwords for fixed data drives: Require passwords for fixed data drive</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVEnforcePassphrase</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>28</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = Do not allow password complexity; 1 = Require password complexity; 2 = Allow password complexity -->
+        <PolicyName>Configure use of passwords for fixed data drives: Configure password complexity for fixed data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVPassphraseComplexity</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>29</PolicyID>
+    </Policy>
+        <Policy>
+    	<!-- Value minimum 8 -->
+        <PolicyName>Configure use of passwords for fixed data drives: Minimum password lenght for fixed data drive</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVPassphraseLength</PolicyKey>
+        <PolicyValue>8</PolicyValue>
+        <PolicyID>30</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Choose how BitLocker-protected fixed drives can be recoverd</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVRecovery</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>31</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected fixed drives can be recoverd: Allow data recovery agent</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVManageDRA</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>32</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected fixed drives can be recoverd: Omit recovery options from the BitLocker setup wizard</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVHideRecoveryPage</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>33</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected fixed drives can be recoverd: Save BitLocker recovery information to AD DS for fixed data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVActiveDirectoryBackup</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>34</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 1 = Backup recovery passwords and key packages; 2 = Backup recovery passwords only -->
+        <PolicyName>Choose how BitLocker-protected fixed drives can be recoverd: Configure storage of BitLocker recovery information to AD DS</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVActiveDirectoryInfoToStore</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>35</PolicyID>
+    </Policy>
+        <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected fixed drives can be recoverd: Do not enable BitLocker until recovery information is stored to AD DS for fixed data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>FDVRequireActiveDirectoryBackup</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>36</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Encryption Policy Enforcement Settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UseFddEnforcePolicy</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>37</PolicyID>
+    </Policy>
+    <Policy>
+        <PolicyName>Encryption Policy Enforcement Settings: Configure the number of noncompliance grace period days for fixed drives...</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>FddEnforcePolicyPeriod</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>38</PolicyID>
+    </Policy>
+     <!-- Operating System Drive -->
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Operating system drive encryption settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>ShouldEncryptOSDrive</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>39</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+    	<!-- This registry entry even gets set if OS encryption settings are deactivated! -->
+        <PolicyName>Operating system drive encryption settings: Allow BitLocker without a compatible TPM (requires a password)</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>EnableBDEWithNoTPM</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>40</PolicyID>
+    </Policy>
+    <Policy>
+     	 <!-- 1 = TPM only; 4 = TPM and PIN -->
+        <PolicyName>Operating system drive encryption settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+         <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>OSDriveProtector</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>41</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Minimum policy value is 4 -->
+        <PolicyName>Operating system drive encryption settings: Configure minimum PIN length for startup</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>MinimumPIN</PolicyKey>
+        <PolicyValue>4</PolicyValue>
+        <PolicyID>42</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ --> 
+        <PolicyName>Allow enhanced PINs for startup</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>UseEnhancedPin</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>43</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ --> 
+        <PolicyName>Choose how BitLocker-protected operating system drives can be recovered</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSRecovery</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>44</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked --> 
+        <PolicyName>Choose how BitLocker-protected operating system drives can be recovered: Allow data recovery agent</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSManageDRA</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>45</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked --> 
+        <PolicyName>Choose how BitLocker-protected operating system drives can be recovered: Omit recovery options from the BitLocker setup wizard</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSHideRecoveryPage</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>46</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked --> 
+        <PolicyName>Choose how BitLocker-protected operating system drives can be recovered: Save BitLocker recovery information to AD DS for operating system drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSActiveDirectoryBackup</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>47</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 1 = Store recovery passwords and key packages; 2 = Store recovery passwords only --> 
+        <PolicyName>Choose how BitLocker-protected operating system drives can be recovered: Configure storage of BitLocker recovery information to AD DS:</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSActiveDirectoryInfoToStore</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>48</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked --> 
+        <PolicyName>Choose how BitLocker-protected operating system drives can be recovered: Do not enable BitLocker until recovery information is stored to AD DS for operating system drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSRequireActiveDirectoryBackup</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>49</PolicyID>
+    </Policy>
+	<Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure use of passwords for operating system drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSPassphrase</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>50</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = Do not allow password complexity; 1 = Require password complexity; 2 = Allow password complexity -->
+        <PolicyName>Configure use of passwords for operating system drives: Configure password complexity for operating system drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSPassphraseComplexity</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>51</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Value minimum 8 -->
+        <PolicyName>Configure use of passwords for operating system drives: Minimum password lenght for operating system drive</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSPassphraseLength</PolicyKey>
+        <PolicyValue>8</PolicyValue>
+        <PolicyID>52</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure use of passwords for operating system drives: Require ASCII-only passwords for removable OS drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSPassphraseASCIIOnly</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>53</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>disabled</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>54</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 0</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>0</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>55</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 1</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>1</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>56</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 2</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>2</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>57</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 3</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>3</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>58</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 4</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>4</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>59</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 5</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>5</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>60</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 6</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>6</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>61</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 7</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>7</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>62</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 8</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>8</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>63</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 9</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>9</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>64</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 10</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>10</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>65</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 11</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>11</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>66</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 12</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>12</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>67</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 13</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>13</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>68</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 14</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>14</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>69</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 15</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>15</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>70</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 16</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>16</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>71</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 17</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>17</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>72</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 18</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>18</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>73</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 19</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>19</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>74</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 20</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>20</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>75</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 21</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>21</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>76</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 22</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>22</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>77</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for BIOS-based firmware configurations: PCR 23</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_BIOS</PolicyPath>
+        <PolicyKey>23</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>78</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure TPM platform validation profile</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>enabled</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>79</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 0</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>0</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>80</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 1</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>1</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>81</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 2</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>2</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>82</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 3</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>3</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>83</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 4</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>4</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>84</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 5</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>5</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>85</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 6</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>6</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>86</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 7</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>7</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>87</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 8</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>8</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>88</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 9</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>9</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>89</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 10</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>10</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>90</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 11</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>11</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>91</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 12</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>12</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>92</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 13</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>13</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>93</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 14</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>14</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>94</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 15</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>15</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>95</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 16</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>16</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>96</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 17</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>17</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>97</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 18</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>18</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>98</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 19</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>19</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>99</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 20</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>20</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>100</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 21</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>21</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>101</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 22</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>22</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>102</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile: PCR 23</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\PlatformValidation</PolicyPath>
+        <PolicyKey>23</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>103</PolicyID>
+    </Policy>
+        <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>disabled</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>104</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 0</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>0</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>105</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 1</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>1</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>106</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 2</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>2</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>107</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 3</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>3</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>108</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 4</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>4</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>109</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 5</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>5</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>110</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 6</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>6</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>111</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 7</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>7</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>112</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 8</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>8</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>113</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 9</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>9</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>114</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 10</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>10</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>115</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 11</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>11</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>116</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 12</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSOSPlatformValidation_UEFI_BIOS</PolicyPath>
+        <PolicyKey>12</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>117</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 13</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>13</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>118</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 14</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSOSPlatformValidation_UEFI_BIOS</PolicyPath>
+        <PolicyKey>14</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>119</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 15</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>15</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>120</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 16</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>16</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>121</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 17</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>17</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>122</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 18</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>18</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>123</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 19</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>19</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>124</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 20</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>20</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>125</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 21</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>21</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>126</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 22</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>22</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>127</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure TPM platform validation profile for native UEFI firmware configurations: PCR 23</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\OSPlatformValidation_UEFI</PolicyPath>
+        <PolicyKey>23</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>128</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = blank; 1 = Use default recovery message and URL; 2 = Use custom recovery message; 3 = Use custom recovery URL -->
+        <PolicyName>Configure pre-boot recovery message and URL: Select an option for the pre-boot recovery message</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RecoveryKeyMessageSource</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>129</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Policy value is a string -->
+        <PolicyName>Configure pre-boot recovery message and URL: Custom recovery message option</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RecoveryKeyMessage</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>130</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Policy value is a string -->
+        <PolicyName>Configure pre-boot recovery message and URL: Custom recovery URL option</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RecoveryKeyUrl</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>131</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Reset platform validation data after BitLocker recovery</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>TPMAutoReseal</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>132</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Use enhanced Boot Configuration Data validation profile</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSUseEnhancedBcdProfile</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>133</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Policy value is a string -->
+        <PolicyName>Use enhanced Boot Configuration Data validation profile: Verify the following additional BCD settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSBcdAdditionalSecurityCriticalSettings</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>134</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Policy value is a string -->
+        <PolicyName>Use enhanced Boot Configuration Data validation profile: Exclude the following additional BCD settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>OSBcdAdditionalExcludedSettings</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>135</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Encryption Policy Enforcement Settings</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>UseOsEnforcePolicy</PolicyKey>
+        <PolicyValue></PolicyValue>
+        <PolicyID>136</PolicyID>
+    </Policy>
+    <Policy>
+    	<!--  -->
+        <PolicyName>Encryption Policy Enforcement Settings: Configure the number of noncomlpiance grace period days for operating system drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement</PolicyPath>
+        <PolicyKey>OsEnforcePolicyPeriod</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>137</PolicyID>
+    </Policy>
+    <!-- Removable Drive -->
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Control use of BitLocker on removable drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVConfigureBDE</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>138</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Control use of BitLocker on removable drives: Allow users to apply BitLocker protection on removable data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVAllowBDE</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>139</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Control use of BitLocker on removable drives: Allow users to suspend and decrypt BitLocker protection on removable data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVDisableBDE</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>140</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Deny write access to removable drives not protected by BitLocker</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVDenyCrossOrg</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>141</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- <none> = inactiv; FAT32 = activ -->
+        <PolicyName>Allow access to BitLocker-protected removable data drives from earlier versions of Windows</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVDiscoveryVolumeType</PolicyKey>
+        <PolicyValue>FAT32</PolicyValue>
+        <PolicyID>142</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Allow access to BitLocker-protected removable data drives from earlier versions of Windows: Do not install BitLocker To Go Reader on FAT formatted removable drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVNoBitLockerToGoReader</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>143</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Configure use of passwords for removable data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVPassphrase</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>144</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = not checked; 1 = checked -->
+        <PolicyName>Configure use of passwords for removable data drives: Require passwords for removable data drive</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVEnforcePassphrase</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>145</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = Do not allow password complexity; 1 = Require password complexity; 2 = Allow password complexity -->
+        <PolicyName>Configure use of passwords for removable data drives: Configure password complexity for removable data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVPassphraseComplexity</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>146</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- Value minimum 8 -->
+        <PolicyName>Configure use of passwords for removable data drives: Minimum password lenght for removable data drive</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVPassphraseLength</PolicyKey>
+        <PolicyValue>8</PolicyValue>
+        <PolicyID>147</PolicyID>
+    </Policy>
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVRecovery</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>148</PolicyID>
+    </Policy>   
+    <Policy>
+    	<!-- 0 = inactiv; 1 = activ -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Allow data recovery agent</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVManageDRA</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>149</PolicyID>
+    </Policy>  
+    <Policy>
+    	<!-- 1 = Allow 48-digit recovery password; 1 = Require 48-digit recovery password -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVRecoveryPassword</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>150</PolicyID>
+    </Policy>     
+    <Policy>
+    	<!-- 1 = Allow 48-digit recovery password; 1 = Require 48-digit recovery password -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Dropdown 1</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVRecoveryPassword</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>151</PolicyID>
+    </Policy> 
+    <Policy>
+    	<!--  0 = Do not allow 256-bit recovery key; 1 = Require 256-digit recovery key; 2 = Allow 256-digit recovery password -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Dropdown 2</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVRecoveryKey</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>152</PolicyID>
+    </Policy>
+    <Policy>
+    	<!--  0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Omit recovery options from BitLocker setup wizard</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVHideRecoveryPage</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>153</PolicyID>
+    </Policy> 
+    <Policy>
+    	<!--  0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Save BitLocker recovery information to AD DS for removable data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVActiveDirectoryBackup</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>154</PolicyID>
+    </Policy> 
+    <Policy>
+    	<!-- 1 = Backup recovery passwords and key packages; 2 = Backup recovery passwords only -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Configure storage of BitLocker recovery information to AD DS</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVActiveDirectoryInfoToStore</PolicyKey>
+        <PolicyValue>1</PolicyValue>
+        <PolicyID>155</PolicyID>
+    </Policy>
+    <Policy>
+    	<!--  0 = not checked; 1 = checked -->
+        <PolicyName>Choose how BitLocker-protected removable drives can be recovered: Do not enable BitLocker until recovery information is stored to AD DS for removable data drives</PolicyName>
+        <PolicyState>disabled</PolicyState>
+        <PolicyPath>HKLM:\Software\Policies\Microsoft\FVE</PolicyPath>
+        <PolicyKey>RDVRequireActiveDirectoryBackup</PolicyKey>
+        <PolicyValue>0</PolicyValue>
+        <PolicyID>156</PolicyID>
+    </Policy>     
+</GPO>
