@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      05/18/2017
+    Last change:      05/23/2017
     Version:          1.0
 
 #>
@@ -164,7 +164,7 @@ $report += "<nav><ul>"
 $report += New-MbamReportNavPoint -resultObjects $mbamSecurityStatus -navPointText "Security Status" -anchor "1" 
 $report += New-MbamReportNavPoint -resultObjects $mbamApplicationStatus -navPointText "Application status" -anchor "2" 
 $report += New-MbamReportNavPoint -resultObjects $mbamInfrastructureStatus -navPointText "Infrastructure status" -anchor "3"
-#$report += New-MbamReportNavPoint -resultObjects $mbamGpoStatus -navPointText "GPO Status" -anchor "4" 
+$report += New-MbamReportNavPoint -resultObjects $mbamGpoStatus -navPointText "GPO Status" -anchor "4" 
 $report += "</ul></nav>"         
 
 # Add a short system overview                
@@ -215,8 +215,8 @@ $report += New-MbamReportSectionHeader -resultObjects $mbamInfrastructureStatus 
 $report += $mbamInfrastructureStatus | ConvertTo-HtmlTable
         
 # Get GPO status      
-#$report += New-MbamReportSectionHeader -resultObjects $mbamGpoStatus -headertext "GPO status" -anchor "4"      
-#$report += $mbamGpoStatus | ConvertTo-HtmlTable
+$report += New-MbamReportSectionHeader -resultObjects $mbamGpoStatus -headertext "GPO status" -anchor "4"      
+$report += $mbamGpoStatus | ConvertTo-HtmlTable
  
 
 # Closing tags
@@ -224,7 +224,7 @@ $report += "</body></html>"
 
 
 # Save the report 
-$report > $reportSavePath"Mbam_client_report_$fileDate.html"
+$report > $reportSavePath"Mbam_report_$currentHost"_"$fileDate.html"
 
 }
 catch 
