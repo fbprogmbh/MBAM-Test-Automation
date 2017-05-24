@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             12/23/2016
-    Last change:      05/18/2017
+    Last change:      05/24/2017
     Version:          0.8
 
 #>
@@ -3727,14 +3727,14 @@ function Test-MbamTPMStatus
     $obj | Add-Member NoteProperty Task("Status of TPM")
     try
     {
-        $tpm = Get-tpm
+        $tpm = Get-TpmObject
 
-        if ($tpm.TpmPresent -and $tpm.TpmReady)
+        if ($tpm.IsActivated_InitialValue -and $tpm.IsEnabled_InitialValue)
         {
             $obj | Add-Member NoteProperty Status("TPM present and ready")
             $obj | Add-Member NoteProperty Passed("true")
         }
-        elseif ($tpm.TpmPresent -and !$tpm.TpmReady)
+        elseif ($tpm.IsActivated_InitialValue -and !$tpm.IsEnabled_InitialValue)
         {
             $obj | Add-Member NoteProperty Status("TPM present but not ready")
             $obj | Add-Member NoteProperty Passed("false")
@@ -4052,6 +4052,7 @@ switch ($osVersion)
 {
     "6.1.7601" { $expectedFileVersion = "61760123003"; break }
     "6.3.9600" { $expectedFileVersion = "63960017031"; break }
+    "10.0.14393" { $expectedFileversion = "100143930"; break }
     "10.0.15063" { $expectedFileVersion = "100150630"; break }
     default { $expectedFileVersion = "0"; break }
 }
@@ -4071,7 +4072,7 @@ if ($expectedFileVersion -eq $fileVersion)
 # Operating system not in the list
 elseif ($expectedFileVersion -eq 0)
 {
-    $obj | Add-Member NoteProperty Status("Operating system could not be identified.")
+    $obj | Add-Member NoteProperty Status("Operating system not in list.")
     $obj | Add-Member NoteProperty Passed("false")
 }
 
