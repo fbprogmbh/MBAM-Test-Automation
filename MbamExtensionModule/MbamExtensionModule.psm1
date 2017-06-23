@@ -27,9 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <#
 
-    Author(s):        Dennis Esly
+    Author(s):        Dennis Esly | dennis.esly@fb-pro.com
     Date:             12/23/2016
-    Last change:      05/24/2017
+    Last change:      05/02/2017
     Version:          0.8
 
 #>
@@ -1981,9 +1981,9 @@ function Test-DNSServerConnection
 
 <#
 .Synopsis
-   Checks, 
+    Checks, if the DNS servers in the environment are reachable.
 .DESCRIPTION
-   Checks, 
+    Checks, if the DNS servers in the environment are reachable. Private network addresses like IPv4 169.* and IPv6 fec0: are skipped.
 .OUTPUTS
    PSCustomObject
 #>
@@ -1992,25 +1992,29 @@ function Test-DNSServerConnection
 
     foreach($ip in $serverIPs)
     {
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0046.$counter")
-        $obj | Add-Member NoteProperty Task("DNS-Server with IP $ip is reachable (Ping-Status)")
-
-        if (Test-Connection $ip -ErrorAction SilentlyContinue -Quiet) 
+         # Check for private network ip addresses and skip them
+        if ( (-not $ip.StartsWith("fec0")) -and (-not $ip.StartsWith("169")) )
         {
+            $obj = New-Object PSObject
+            $obj | Add-Member NoteProperty Name("TC-Mbam-0046.$counter")
+            $obj | Add-Member NoteProperty Task("DNS-Server with IP $ip is reachable (Ping-Status)")
+
+            if (Test-Connection $ip -ErrorAction SilentlyContinue -Quiet) 
+                        {
             $obj | Add-Member NoteProperty Status("Reachable")
             $obj | Add-Member NoteProperty Passed("true") 
         }
-        else 
-        {
+            else 
+                            {
             $obj | Add-Member NoteProperty Status("Not reachable")
             $obj | Add-Member NoteProperty Passed("false")
             Write-LogFile -Path $LogPath -name $LogName -message "DNS-server with IP $ip not reachable " -Level Error   
         }
 
-        Write-Output $obj
+            Write-Output $obj
 
-        $counter++
+            $counter++
+        }
     }
 }
 

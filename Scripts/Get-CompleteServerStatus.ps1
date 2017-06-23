@@ -27,9 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <#
 
-    Author(s):        Dennis Esly 
+    Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      05/02/2017
+    Last change:      06/23/2017
     Version:          1.0
 
 #>
@@ -42,15 +42,15 @@ Import-Module MbamExtensionModule.psm1
     =================================================================
 #>
 
+$mbamVersion = "2.5.1133.0"
+$reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%m%d_%H%M") 
+
 $year = Get-Date -Format "yyyy"
-$month = Get-Date -Format "MMMM" 
+$month = Get-Date -Format "MM" 
 
 $reportSavePath = "C:\inetpub\wwwroot\reports\Reports\$year\$month\"
 $xmlSavePath = "C:\inetpub\wwwroot\reports\XML\$year\$month\"
-$fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
- 
 
-$reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%m%d_%H%M") 
 
 $modulePath = (Get-Module -ListAvailable MbamExtensionModule).Path
 $modulePath = $modulePath.Substring(0,$modulePath.LastIndexOf('\'))
@@ -61,7 +61,7 @@ $ReportsROMembers = Get-Content "$modulePath\ReportsROMembers.txt"
 $knownAdmins = Get-Content "$modulePath\knownLocalAdmins.txt"
 $expectedLogins = Get-Content "$modulePath\expectedLogins.txt"
 
-$mbamVersion = "2.5.1133.0"
+$fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
 
 <#
     Configuration for short system information in report
@@ -147,6 +147,7 @@ $mbamSecurityStatus = @(
 $mbamServerEnvironmentSystemsStatus = @(
     Test-DefaultDCConnection
     Test-DNSServerConnection
+    Test-ForestDCsConnection
 )
 
 

@@ -27,9 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <#
 
-    Author(s):        Dennis Esly 
+    Author(s):        Dennis Esly
     Date:             04/17/2017
-    Last change:      05/02/2017
+    Last change:      06/23/2017
     Version:          1.0
 
 #>
@@ -45,7 +45,7 @@ Import-Module MbamExtensionModule.psm1
 $mbamVersion = "2.5.1133.0"
 
 $year = Get-Date -Format "yyyy"
-$month = Get-Date -Format "MMMM" 
+$month = Get-Date -Format "MM" 
 
 $reportSavePath = "C:\inetpub\wwwroot\reports\Reports\$year\$month\"
 $fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
@@ -136,6 +136,7 @@ $mbamSecurityStatus = @(
 $mbamServerEnvironmentSystemsStatus = @(
     Test-DefaultDCConnection
     Test-DNSServerConnection
+    Test-ForestDCsConnection
 )
 
 
