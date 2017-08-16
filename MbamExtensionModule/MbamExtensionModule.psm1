@@ -1915,33 +1915,45 @@ function Test-ForestDCsConnection
 
 <#
 .Synopsis
-   Checks, 
+   The function pings all DC in a domain forest to check if they are available. 
 .DESCRIPTION
-   Checks, 
+   Gets all Domain Controllors in a forest and pings them. Returns a PSCustomObject for every found DC.
+   Domain Controllers matching with their IP address or name to an entry on the exception list are not pinged.
+   Exception list is for DC known to be listed but not reachable by ping because of e.g. firewall rules etc.
+.PARAM
+    $exceptionsList a List of strings representing IP addresses or DC names
 .OUTPUTS
    PSCustomObject
 #>
-    try
-    {
-        # get default domain controller
-        $defaultDC = Get-ADDomainController | select -ExpandProperty IPv4Address
-    }
-    catch
-    {
+Param(
+    $exceptionList
+)
 
-    }
-    try
-    {
-        # get all domain controller in forest except for default domain controller
-        $allDCs = (Get-ADForest).Domains | %{ Get-ADDomainController -Filter * -server $_} | where {$_.IPv4Address -NE $defaultDC}
+try
+{
+    # get default domain controller
+    $defaultDC = Get-ADDomainController | select -ExpandProperty IPv4Address
+}
+catch
+{
+
+}
+try
+{
+    # get all domain controller in forest except for default domain controller
+    $allDCs = (Get-ADForest).Domains | %{ Get-ADDomainController -Filter * -server $_} | where {$_.IPv4Address -NE $defaultDC}
         
-        $i = 1
+    $i = 1
 
-        # test connection to each dc
-        foreach($dc in $allDCs)
+    # test connection to each dc
+    foreach($dc in $allDCs)
+    {
+        # if $dc is not on the exception list ( with IP or name)
+        if (-not(($exceptionList.contains($dc.IPv4Address)) -or ($exceptionList.contains($dc.name))) )
         {
+            # test connection, otherwise skip 
             $obj = New-Object PSObject
-            $obj | Add-Member NoteProperty Name("TC-Mbam-0048.$i")
+            $obj | Add-Member NoteProperty Name("TC-SSP-0011.$i")
             $obj | Add-Member NoteProperty Task("Domain Controller "+$dc.Name+"("+$dc.IPv4Address+") is reachable (Ping-Status)")
 
             if (Test-Connection $dc.IPv4Address -ErrorAction SilentlyContinue -Quiet)
@@ -1960,18 +1972,19 @@ function Test-ForestDCsConnection
             Write-Output $obj
         }
     }
-    # domain controllers / forest not reachable
-    catch
-    {
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0048")
-        $obj | Add-Member NoteProperty Task("Domain Controller is reachable (Ping-Status)")
-        $obj | Add-Member NoteProperty Status("Not reachable")
-        $obj | Add-Member NoteProperty Passed("false") 
-        Write-Output $obj
+}
+# domain controllers / forest not reachable
+catch
+{
+    $obj = New-Object PSObject
+    $obj | Add-Member NoteProperty Name("TC-SSP-0011")
+    $obj | Add-Member NoteProperty Task("Domain Controller is reachable (Ping-Status)")
+    $obj | Add-Member NoteProperty Status("Not reachable")
+    $obj | Add-Member NoteProperty Passed("false") 
+    Write-Output $obj
         
-        Write-LogFile -Path $LogPath -name $LogName -message "Domain Controllers in Forest not reachable" -Level Error  
-    }
+    Write-LogFile -Path $LogPath -name $LogName -message "Domain Controllers in Forest not reachable" -Level Error  
+}
 }
 
 function Test-DNSServerConnection
