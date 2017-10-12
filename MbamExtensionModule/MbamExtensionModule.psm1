@@ -4054,7 +4054,9 @@ function Test-BitlockerDriverVersion
 
 try
 {
-    $fileVersion = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo("c:\windows\system32\drivers\fvevol.sys").ProductVersion).replace(".","")
+    #$fileVersion = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo("c:\windows\system32\drivers\fvevol.sys").ProductVersion).replace(".","")
+    $file = Get-Item C:\Windows\System32\drivers\fvevol.sys 
+    $fileVersion = -join($file.VersionInfo.ProductMajorPart,$file.VersionInfo.ProductMinorPart,$file.VersionInfo.ProductBuildPart,$file.VersionInfo.ProductPrivatePart)
     $osVersion = Get-CimInstance Win32_OperatingSystem | select -ExpandProperty Version
 }
 catch
@@ -4067,10 +4069,10 @@ catch
 
 switch ($osVersion)
 {
-    "6.1.7601" { $expectedFileVersion = "61760123003"; break }
-    "6.3.9600" { $expectedFileVersion = "63960017031"; break }
-    "10.0.14393" { $expectedFileversion = "100143930"; break }
-    "10.0.15063" { $expectedFileVersion = "100150630"; break }
+    "6.1.7601" { $expectedFileVersion = "61760123003"; break } # Windows 7
+    "6.3.9600" { $expectedFileVersion = "63960017031"; break } 
+    "10.0.14393" { $expectedFileversion = "100143930"; break } # Windows 10 
+    "10.0.15063" { $expectedFileVersion = "10015063502"; break } # Windows 10 Creators Update
     default { $expectedFileVersion = "0"; break }
 }
 
@@ -4105,6 +4107,67 @@ elseif ($expectedFileVersion -lt $fileVersion)
 {
     $obj | Add-Member NoteProperty Status("Driver version is higher than expected.")
     $obj | Add-Member NoteProperty Passed("warning")
+}
+
+Write-Output $obj
+}
+
+
+function Test-TPMFirmwareVul 
+{
+# TC-Mbam-0050
+#-------------
+
+<#
+.Synopsis 
+    Checks, if the TPM is vulnerable for security advisory ADV170012
+.DESCRIPTION
+    Checks, if the TPM is vulnerable for security advisory ADV170012. See https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/ADV170012 for 
+    further information.
+.LINK https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/ADV170012
+#>
+
+#TODO: testen, ob entsprechendes Update installiert ist
+
+try
+{
+    # Get first event which indicates vulnerability
+    $vulEvent = Get-EventLog -LogName System | where {($_.eventID -eq 1794) -and ($_.Source -eq "TPM-WMI")} | select -First 1  -ErrorAction Stop  
+}
+catch
+{
+    # log error
+    $msg = $_.Exception.toString()
+    $msg += "; " + $_.ScriptStackTrace.toString()
+    write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+}
+
+# Create the test result object
+$obj = New-Object PSObject
+$obj | Add-Member NoteProperty Name("TC-Mbam-0050")
+$obj | Add-Member NoteProperty Task("ADV170012 | Vulnerability in TPM could allow Security Feature Bypass.")
+
+# No event found
+if ($vulEvent -eq $null)
+{
+    $obj | Add-Member NoteProperty Status("TPM not vulnerable")
+    $obj | Add-Member NoteProperty Passed("true")
+}
+# Event found, we have to check if it is an old entry or if it was logged after the last system boot up time
+else
+{
+    $lastboot = Get-CimInstance -ClassName win32_operatingsystem | select lastbootuptime
+
+    if ($lastboot.lastbootuptime -lt $vulEvent.TimeGenerated)
+    {
+        $obj | Add-Member NoteProperty Status("TPM vulnerable, found event 1794")
+        $obj | Add-Member NoteProperty Passed("false")
+    }
+    else
+    {
+        $obj | Add-Member NoteProperty Status("TPM not vulnerable")
+        $obj | Add-Member NoteProperty Passed("true")
+    }
 }
 
 Write-Output $obj
