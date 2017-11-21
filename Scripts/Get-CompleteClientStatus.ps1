@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      05/15/2017
+    Last change:      11/21/2017
     Version:          1.0
 
 #>
@@ -42,7 +42,7 @@ Import-Module MbamExtensionModule.psm1
     =================================================================
 #>
 
-$agentVersion = "2.5.1134.0"
+$agentVersion = "2.5.1135.0"
 $reportSavePath = "C:\ClientReports\"
 $reportHtmlTitle = "FB Pro GmbH - MBAM-Client report " + (Get-Date -UFormat "%Y%m%d_%H%M")
 #$gpoSource = "C:\gpo.xml" 

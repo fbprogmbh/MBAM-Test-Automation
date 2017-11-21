@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             04/17/2017
-    Last change:      06/23/2017
+    Last change:      11/21/2017
     Version:          1.0
 
 #>
@@ -42,7 +42,7 @@ Import-Module MbamExtensionModule.psm1
     =================================================================
 #>
 
-$mbamVersion = "2.5.1133.0"
+$mbamVersion = "2.5.1135.0"
 
 $year = Get-Date -Format "yyyy"
 $month = Get-Date -Format "MM" 
