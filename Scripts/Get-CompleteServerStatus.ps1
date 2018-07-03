@@ -29,21 +29,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      11/21/2017
-    Version:          1.01
+    Last change:      11/29/2017
+    Version:          1.1
 
 #>
 
 
-Import-Module MbamExtensionModule.psm1
+Import-Module MbamExtensionModule -ErrorAction SilentlyContinue
+Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
+Import-Module ADExtensionModule -ErrorAction SilentlyContinue
+Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 <#  
     Configuration
     =================================================================
 #>
 
-# MBAM servicing release september 2017
 $mbamVersion = "2.5.1135.0"
+$mbamUrl = "http://mbam.services.corp.fbpro"
 $reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%m%d_%H%M") 
 
 $year = Get-Date -Format "yyyy"
@@ -61,6 +64,26 @@ $HelpDeskMembers = Get-Content "$modulePath\HelpDeskMembers.txt"
 $ReportsROMembers = Get-Content "$modulePath\ReportsROMembers.txt"
 $knownAdmins = Get-Content "$modulePath\knownLocalAdmins.txt"
 $expectedLogins = Get-Content "$modulePath\expectedLogins.txt"
+$webServerFeatureList = @(
+        'Web-Static-Content', 
+        'Web-Default-Doc',
+        'Web-Asp-Net45', 
+        'Web-Net-Ext45', 
+        'Web-ISAPI-Ext', 
+        'Web-ISAPI-Filter', 
+        'Web-Windows-Auth', 
+        'Web-Filtering')
+$windowsServerFeatureList = @(
+            'Net-Framework-45-Core', 
+            'NET-WCF-HTTP-Activation45', 
+            'NET-WCF-TCP-Activation45', 
+            'WAS-Process-Model', 
+            'WAS-NET-Environment', 
+            'WAS-Config-APIs')
+$serviceList = @(
+        'WAS', 
+        'W3SVC')
+$aspNetMvc4 = @('Microsoft ASP.NET MVC 4 Runtime')
 
 $fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
 
@@ -108,39 +131,54 @@ if (!(test-path $xmlSavePath))
 
 $mbamInfrastructureStatus = @(
     Test-MbamFirewallPortState
-    Test-MbamComplianceDbServerConnection
-    Test-MbamRecoveryDbServerConnection
+    Test-MbamComplianceDbSrvConnection
+    Test-MbamRecoveryDbSrvConnection
     Test-MbamComplianceDbConnectState
     Test-MbamRecoveryDbConnectState
 )
 
 $mbamOSStatus = @(
-    Test-MbamWebServerRoleState 
-    Test-MbamWebserverServiceState
-    Test-MbamWindowsFeatureState 
-    Test-MbamWebserverFeatureState 
-    Test-MbamASP_NetMVC4
-    Test-MbamServerRestartedAfterUpdate
+    Test-WinSrvFeatureState -feature "web-server" -moduleID "TC-MBAM-0018"
+    Test-WinSrvFeatureState -feature $webServerfeatureList -moduleID "TC-MBAM-0019" 
+    Test-WinSrvServiceState -service $serviceList -moduleId "TC-MBAM-0020"
+    Test-WinSrvFeatureState -feature $windowsServerFeatureList -moduleID "TC-MBAM-0021" 
+    Test-WinSrvSoftwareInstallState -softwareList $aspNetMvc4 -moduleId "TC-MBAM-0022"
+    Test-WinSrvRestartedAfterUpdate -moduleId "TC-MBAM-0023"
     Test-SccmClientUpdates
+    #Test-MaintenanceModeOn
 )
 
 $mbamApplicationStatus = @(
+    Test-MbamSrvFeatureInstalled
     Test-MbamHelpDeskPage -https
-    Test-MbamSelfServicePage -https
+    Test-MbamHelpDeskVirtualDir
     Test-MbamHelpDeskSPNState
+    Test-MbamSelfServicePage -https
+    Test-MbamSelfSvcVirtualDir -enabled
     Test-MbamSelfServiceSPNState
-    Test-MbamServerVersion25 $mbamVersion
+    Test-MbamServerVersion $mbamVersion
+    Test-MbamSrvAgentSvcEnabled
+    Test-MbamAdminPortalEnabled
+    Test-MbamSelfSvcPortalEnabled -enabled
+    Test-MbamHelpDeskPortalVersion $mbamVersion
+    Test-MbamSelfSvcPortalVersion $mbamVersion -enabled
+    Test-MbamSrvAgentSvcVersion $mbamVersion
+    Test-MbamSrvAccEnabled
+    Test-MbamAdminSvcRunning -url $mbamUrl
+    Test-MbamStatusReportSvcRunning -url $mbamUrl
+    Test-MbamCoreSvcRunning -url $mbamUrl
 )
 
+
 $mbamSecurityStatus = @(        
-    Test-MbamCertificateValidationState
+    Test-PkiCertificateValid -thumbprint $ConfigFile.Settings.CertificateThumbprint -hostname "mbam.services.corp.fbpro" -moduleID "TC-MBAM-0033"
     Test-MbamCertificateThumbprint -thumbprint $ConfigFile.Settings.CertificateThumbprint
     Test-MbamSSLCertificateExpirationDate
     Test-MbamHelpDeskSslOnly
-    Test-MbamSelfServiceSslOnly    
-    Test-MbamSecurityGrpMembers -members $advHelpDeskMembers -group AdvHelpDesk
-    Test-MbamSecurityGrpMembers -members $HelpDeskMembers -group HelpDesk
-    Test-MbamSecurityGrpMembers -members $ReportsROMembers -group ReportsRO
+    Test-MbamSelfServiceSslOnly  
+    Test-ADSecurityGroupMember -securityGroup "MBAMAdvHelpDesk" -members $advHelpDeskMembers -moduleId "TC-MBAM-0035.1"  
+    Test-ADSecurityGroupMember -securityGroup "MBAMHelpDesk" -members $HelpDeskMembers -moduleId "TC-MBAM-0035.2"  
+    Test-ADSecurityGroupMember -securityGroup "MBAMReport" -members $ReportsROMembers -moduleId "TC-MBAM-0035.3"  
     Test-LocalAdmins -knownAdmins $knownAdmins
     Test-LastUserLogins -acceptedUsers $expectedLogins
 )
@@ -272,23 +310,23 @@ $report +=  "<table class=`"info`">
     
 # Get infrastructure status      
 $report += New-MbamReportSectionHeader -resultObjects $mbamInfrastructureStatus -headertext "Infrastructure status" -anchor "1"  
-$report += $mbamInfrastructureStatus | ConvertTo-HtmlTable
+$report += $mbamInfrastructureStatus | ConvertTo-TapResultHtmlTable
         
 # Get operating system status      
 $report += New-MbamReportSectionHeader -resultObjects $mbamOSStatus -headertext "Operating System status" -anchor "2"      
-$report += $mbamOSStatus | ConvertTo-HtmlTable
+$report += $mbamOSStatus | ConvertTo-TapResultHtmlTable
   
 # Get Mbam appliciation status      
 $report += New-MbamReportSectionHeader -resultObjects $mbamApplicationStatus -headertext "Application status" -anchor "3"      
-$report += $mbamApplicationStatus | ConvertTo-HtmlTable      
+$report += $mbamApplicationStatus | ConvertTo-TapResultHtmlTable      
         
 # Get security status      
 $report += New-MbamReportSectionHeader -resultObjects $mbamSecurityStatus -headertext "Security Status" -anchor "4"      
-$report += $mbamSecurityStatus | ConvertTo-HtmlTable
+$report += $mbamSecurityStatus | ConvertTo-TapResultHtmlTable
 
 # Get and output server environment systems status
 $report += New-MbamReportSectionHeader -resultObjects $mbamServerEnvironmentSystemsStatus -headertext "Server Environment Systems Status:" -anchor "5"
-$report += $mbamServerEnvironmentSystemsStatus | ConvertTo-HtmlTable         
+$report += $mbamServerEnvironmentSystemsStatus | ConvertTo-TapResultHtmlTable         
      
 $report += "</table></div>"
 # Add user login history to report

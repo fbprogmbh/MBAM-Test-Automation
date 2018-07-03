@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      11/21/2017
+    Last change:      05/23/2017
     Version:          1.0
 
 #>
@@ -54,10 +54,6 @@ $reportHtmlTitle = "FB Pro GmbH - MBAM-Client report " + (Get-Date -UFormat "%Y%
 $fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
 $reportDate = Get-Date -Format g
 $currentHost = [System.Net.Dns]::GetHostByName(($env:computerName)) | select -ExpandProperty Hostname
-$osInfo = Get-OperatingSystemInfo
-$lastBootUpTime = Get-SystemStartupTime
-$freeRAM = "{0:N3}" -f ($osInfo.FreePhysicalMemory/1MB)
-$freeDiskSpace = "{0:N1}" -f ((get-WmiObject win32_logicaldisk | where DeviceID -eq "C:" | select -ExpandProperty FreeSpace)/1GB)
 $logo = $ConfigFile.Settings.Logo
 
 <#
@@ -102,7 +98,7 @@ $mbamInfrastructureStatus = @(
 )
 
 $mbamGpoStatus = @(
-    #Test-MbamGpos -source $gpoSource
+    #Test-MbamGpo -source $gpoSource
 )
 
 
@@ -132,10 +128,11 @@ $report = "<!DOCTYPE html>
                     th {background-color: #d6d6c2; color: white; text-transform: uppercase; font-size: 1.5em; border-bottom: 1px solid darkgray;}
                     th, td {padding: 5px 10px; text-align: left;}
                     tr:nth-child(even) {background-color: #e6e6e6;}
-                    tr:hover {background-color: #a6a6a6;}
-                    table.result-table td:first-child {width: 15%}
-                    table.result-table td:nth-child(2) {width: 50%;}
-                    table.result-table td:nth-child(3) {width: 20%;}
+                    .result-table tr:hover {background-color: #a6a6a6; border: 2px solid #c6ecd9;}
+                    table.result-table td:first-child {width: 10%}
+                    table.result-table td:nth-child(2) {width: 10%;}
+                    table.result-table td:nth-child(3) {width: 45%;}
+                    table.result-table td:nth-child(4) {width: 20%;}
                     table.result-table td:last-child {width: 15%;}
                     table.result-table th:last-child {text-align: center;}
                     table.info td:first-child {width: 250px;}
@@ -162,63 +159,49 @@ $report = "<!DOCTYPE html>
 
 # Add a navigation to the report 
 $report += "<nav><ul>"
-$report += New-MbamReportNavPoint -resultObjects $mbamSecurityStatus -navPointText "Security Status" -anchor "1" 
-$report += New-MbamReportNavPoint -resultObjects $mbamApplicationStatus -navPointText "Application status" -anchor "2" 
-$report += New-MbamReportNavPoint -resultObjects $mbamInfrastructureStatus -navPointText "Infrastructure status" -anchor "3"
-$report += New-MbamReportNavPoint -resultObjects $mbamGpoStatus -navPointText "GPO Status" -anchor "4" 
+$report += "<li><a href=`"#1`">System overview</a></li>" 
+$report += "<li><a href=`"#2`">MBAM agent configuration</a></li>" 
+$report += "<li><a href=`"#3`">PowerShell Version</a></li>"
+$report += New-MbamReportNavPoint -resultObjects $mbamSecurityStatus -navPointText "Security Status" -anchor "4" 
+$report += New-MbamReportNavPoint -resultObjects $mbamApplicationStatus -navPointText "Application status" -anchor "5" 
+$report += New-MbamReportNavPoint -resultObjects $mbamInfrastructureStatus -navPointText "Infrastructure status" -anchor "6"
+$report += New-MbamReportNavPoint -resultObjects $mbamGpoStatus -navPointText "GPO Status" -anchor "7" 
+$report += "<li><a href=`"#7`">MBAM event logs</a></li>" 
 $report += "</ul></nav>"         
 
-# Add a short system overview                
-$report +=  "<table class=`"info`">
-                <tr>
-                    <td>Host:</td>
-                    <td>$currentHost</span>
-                </tr>
-                <tr>
-                    <td>Operating System:</td>
-                    <td>"+$osInfo.Caption+"</span>
-                </tr>
-                <tr>
-                    <td>OS version:</td>
-                    <td>"+$osInfo.Version+"</span>
-                        </tr>
-                        <tr>
-                            <td>Last boot up time:</td>
-                            <td>$LastBootUpTime</span>
-                        </tr>
-                        <tr>
-                            <td>OS architecture:</td>
-                            <td>"+$osInfo.OSArchitecture+"</span>
-                </tr>
-                <tr>
-                    <td>Free physical memory (GB):</td>
-                    <td>$freeRAM</span>
-                </tr> 
-                <tr>
-                    <td>Free disk space (GB):</td>
-                    <td>$freeDiskSpace</span>
-                </tr>                          
-            </table>"
+# Add a short system overview 
+$report += "<h3 id=`"1`">System overview</h3>"               
+$report +=  Get-SystemOverview | ConvertTo-HtmlTable -cssClass info
+
+# Add MBAM agent configuration overview
+$report += "<h3 id=`"2`">MBAM agent configuration overview</h3>"
+$report += Get-MbamClientConfiguration | ConvertTo-HtmlTable -cssClass info
+
+# Add MBAM agent configuration overview
+$report += "<h3 id=`"3`">PowerShell version overview</h3>"
+$report += Get-PSVersionAsHtmlTable -cssClass info
  
  try
 {   
-
 # Get security status      
-$report += New-MbamReportSectionHeader -resultObjects $mbamSecurityStatus -headertext "Security Status" -anchor "1"      
-$report += $mbamSecurityStatus | ConvertTo-HtmlTable   
+$report += New-MbamReportSectionHeader -resultObjects $mbamSecurityStatus -headertext "Security Status" -anchor "4"      
+$report += $mbamSecurityStatus | ConvertTo-TapResultHtmlTable   
 
-# Get Mbam appliciation status      
-$report += New-MbamReportSectionHeader -resultObjects $mbamApplicationStatus -headertext "Application status" -anchor "2"      
-$report += $mbamApplicationStatus | ConvertTo-HtmlTable  
+# Get MBAM appliciation status      
+$report += New-MbamReportSectionHeader -resultObjects $mbamApplicationStatus -headertext "Application status" -anchor "5"      
+$report += $mbamApplicationStatus | ConvertTo-TapResultHtmlTable  
     
 # Get infrastructure status      
-$report += New-MbamReportSectionHeader -resultObjects $mbamInfrastructureStatus -headertext "Infrastructure status" -anchor "3"  
-$report += $mbamInfrastructureStatus | ConvertTo-HtmlTable
+$report += New-MbamReportSectionHeader -resultObjects $mbamInfrastructureStatus -headertext "Infrastructure status" -anchor "6"  
+$report += $mbamInfrastructureStatus | ConvertTo-TapResultHtmlTable
         
 # Get GPO status      
-$report += New-MbamReportSectionHeader -resultObjects $mbamGpoStatus -headertext "GPO status" -anchor "4"      
-$report += $mbamGpoStatus | ConvertTo-HtmlTable
- 
+$report += New-MbamReportSectionHeader -resultObjects $mbamGpoStatus -headertext "GPO status" -anchor "7"      
+$report += $mbamGpoStatus | ConvertTo-TapResultHtmlTable
+
+# Get latest 15 MBAM event log entries for admin and operational log
+$report += "<h3 id='7'>MBAM event log entries</h3>"
+$report += Get-MbamClientEventLogEntry -quantity 15
 
 # Closing tags
 $report += "</body></html>"
