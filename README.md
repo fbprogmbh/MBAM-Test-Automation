@@ -1,4 +1,4 @@
-# MBAM Test Automation Package Version 2#
+# MBAM Test Automation Package Version 2 #
 
 ## Overview ##
 The MBAM Test Automation Package gives you the ability to get an overview about the availability and the security status of your Microsoft Bitlocker Administration and Monitoring (MBAM) system.
@@ -31,7 +31,7 @@ We recommend to use WMF 5.1.
   * LogFileModule
   * Classes
 
-A default load path could be e.g. the path in your user profile under *"userprofile"\Documents\WindowsPowerShell\Modules* (if it does not exists, you have to create it) or the new location under  *C:\Program Files\WindowsPowerShell\Modules*
+A default load path could be e.g. the path in your user profile under *"userprofile"\Documents\WindowsPowerShell\Modules* (if it does not exists, you have to create it) or the new location under  *C:\Program Files\WindowsPowerShell\Modules*.
 For a easy start you can use the **Install-MbamExtensionModule.ps1** script to add the current of your cloned/unzipped package location into the PowerShell module path environment variable.
 * For the server side report run the PowerShell scripts *New-GroupMembersFiles.ps1* and *New-LocalAdminsFile.ps1* inside the folder MbamExtensionModule once to create  files which will contain the users of the MBAM security groups as well as a file with all local admins. 
 * To use the new feature of event logging, a new application log must be registered as well as some event sources. For this execute the script *New-FBProEventLogs.ps1* inside the *scripts* folder, it will do the work.
