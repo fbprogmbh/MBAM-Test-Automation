@@ -1,5 +1,5 @@
 ﻿<#
-Copyright (c) 2017, FB Pro GmbH, Germany
+Copyright (c) 2018, FB Pro GmbH, Germany
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -16,7 +16,7 @@ modification, are permitted provided that the following conditions are met:
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANYM
 DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -25,239 +25,3023 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
 
-<#
+#region Author, date, version 
+#
+#    Author(s):        Dennis Esly | dennis.esly@fb-pro.com
+#    Date:             05/03/2018
+#    Last change:      08/09/2018
+#    Version:          2.1.1
+#    State:            Approved
+#
+#endregion
 
-    Author(s):        Dennis Esly | dennis.esly@fb-pro.com
-    Date:             12/23/2016
-    Last change:      05/02/2017
-    Version:          0.8
+#region Imports
+Using module TapResultClass
 
-#>
-
-<#
-
-    Import modules
-    ==============        
-
-#>
-
-# Check, if necessary module are available and imported, if not, import them
-
-if ((Get-Module -List Microsoft.PowerShell.Security) -and !(Get-Module Microsoft.PowerShell.Security))
-{
-    Import-Module Microsoft.PowerShell.Security
-}
-
-if ((Get-Module -List Microsoft.MBAM) -and !(Get-Module Microsoft.MBAM))
-{
-    Import-Module Microsoft.MBAM
-}
-
-if ((Get-Module -List ActiveDirectory) -and !(Get-Module ActiveDirectory))
-{
-    Import-Module ActiveDirectory
-}
-
-if ((Get-Module -List BitLocker) -and !(Get-Module BitLocker))
-{
-    Import-Module BitLocker
-}
-
-if ((Get-Module -List TrustedPlatformModule) -and !(Get-Module TrustedPlattformModule))
-{
-    Import-Module TrustedPlatformModule
-}
-##################################################################
+Import-Module Microsoft.PowerShell.Security -ErrorAction SilentlyContinue
+Import-Module Microsoft.MBAM -ErrorAction SilentlyContinue
+Import-Module ActiveDirectory -ErrorAction SilentlyContinue
+Import-Module BitLocker -ErrorAction SilentlyContinue
+Import-Module TrustedPlatformModule -ErrorAction SilentlyContinue
+Import-Module LogFileModule -ErrorAction SilentlyContinue
+Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
-$ConfigFile = Import-LocalizedData -FileName Settings.psd1
+$mbamExtensionModulePath = (Get-Module -ListAvailable MbamExtensionModule).Path
+$baseDir = (Get-Item $mbamExtensionModulePath).Directory.Parent.Fullname+"\Settings"
+Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+#endregion
 
+#region Set log file settings
 
 # Set the path and name of standard log file to path and name configured in settings
 $LogPath = $ConfigFile.Settings.LogFilePath
-$LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
+$LogName = (Get-date -Format "yyyyMMdd")+"_" + $ConfigFile.Settings.LogFileName
+
+#endregion
+
+#region Table of content
+# ================
+#
+# 1 .........Test functions (public)
+#
+#   1.1 .....MBAM server tests
+#
+#   1.2 .....MBAM client tests
+#
+# 2 .........Helper functions
+#
+#   2.1 .....Client specific helpers
+#
+#   2.2 .....Server specific helpers
+#
+# 3 .........Report functions
+# 
+#   3.1 .....Client specific report functions
+#
+#   3.2 .....Server specific report functions
+#
+#   3.3 .....General report functions
+#
+# -----------------
+#endregion
 
 
+#region 1 Test functions
+# ----------------------
+#
+# Section for all Test-* functions inside this module.
+#
+############################################################## 
 
-# Helper functions
-# ----------------
-<#
+#region 1.1 MBAM server tests
+# ---------------------
+#
+# Section for tests targeting the MBAM backend service
+#=====================================================
 
- Some functions used in other functions in this module.
-
-#>
-
-function Get-OperatingSystemInfo
+function Test-MbamComplianceDbConnectState
 {
 <#
 .Synopsis
-   Gets a bunch of system information.
+    Tests wether the administration-website application was found and successfully connected to the compliance database
 .DESCRIPTION
-   Gets a bunch of system information like free RAM, free disk space, OS version etc.
-#>
-
-    Get-CimInstance Win32_OperatingSystem | select *
-}
-
-function Get-SystemStartupTime
-{
-<#
-.Synopsis
-   Gets the time of last system start up.
-.DESCRIPTION
-   Looks up for the last system startup by checking the event log for id 6005.
+    Tests wether the administration-website application was found and successfully connected to the compliance database.
+    Therefore the last system startup is determined and afterwards the event log of MBAM-web/operational is checked for an event with ID 200 that contains the expression "Compliance database" in the message.
+    Until the website is not access since the last system reboot, no event log records will be created and therefore the function will return a PSCustomObject with status "not found".
 .EXAMPLE
-   PS C:\Get-SystemStartupTime
-   
-   Freitag, 30. Dezember 2016 09:03:08
-#>
-   
-    # Get log record with id 12 of source kernel general and return time
-    Get-winevent -FilterHashtable @{Logname='System'; ProviderName='Microsoft-Windows-Kernel-General'; ID=12} -MaxEvents 1 | select @{label='TimeCreated';expression={$_.TimeCreated.ToString("yyyy-M-d HH:mm:ss")}} -ExpandProperty TimeCreated
+    PS C:\Test-MBAMComplianceDbConnectState
 
+    ID       : FBP-MBAM-0001
+    moduleID : TC-MBAM-0001
+    Task     : Administration-website application found and successfully connected to compliance database
+    Status   : Connected
+    Passed   : Passed
+.NOTES
+    ID FBP-MBAM-0001   
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0001", "TC-MBAM-0001", "Administration-website application found and successfully connected to compliance database")
+
+    Write-Verbose "[FBP-MBAM-0001]: Get last system startup time"    
+    $lastStartup = Get-SystemStartupTime
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0001]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0001]"
+
+    try
+    {
+        # In case the HelpDesk webpage was not called since the last system startup, we trigger a simple call to it, but without a output.
+        # After that the event we will be looking for in the event log should be created, otherwise there is something wrong
+        Test-MBAMHelpDeskPage | Out-Null
+
+        Write-Verbose "[FBP-MBAM-0001]: Get MBAM event 200 after last system start up"
+        $connected = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM-web/operational";StartTime=$lastStartup;} -ErrorAction Stop | Where-Object {$_.Message -Like "*Compliance database*" -and $_.ID -eq 200} 
+
+        if ($null -ne $connected)
+        {
+            # Event was found and connection to database was once established
+            $obj.Status = "Connected"
+            $obj.Passed = 1
+        }
+        else 
+        {
+            # Event still not found, something could be wrong.
+            $obj.Status = "Not connected"
+            $obj.Passed = 2
+
+            $msg = "Event 200 not found: The MBAM administration website application is not connected to a supported version of the Compliance database. For further debugging look for Event 105 in Microsoft-Windows-MBAM-Web/Admin"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 1 -EntryType Error -Category 0 
+        }
+    }
+    catch 
+    {
+        $obj.Status = "Not found"
+        $obj.Passed = 4
+
+        $msg = "An error occured getting event id 200 information"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 2 -EntryType Error -Category 0 
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+
+    Write-Output $obj
 }
 
-function Get-EventLogErrorDetails
+function Test-MbamRecoveryDbConnectState
 {
 <#
 .Synopsis
-   Gets detailed information about a event log entry with given record ID.
+    Tests wether the administration-website application was found and successfully connected to the recovery database
 .DESCRIPTION
-   Gets detailed information about a event log entry and returns it as a single string. The event log entry is determined by the channelname and the record ID.
-.OUTPUTS 
-    Object.String returns a single string c
+    Tests wether the administration-website application was found and successfully connected to the recovery database.
+    Therefore the last system startup is determined and afterwards the event log of MBAM-web/operational is checked for an event with ID 200 that contains the expression "Recovery database" in the message.
+    Until the website is not access since the last system reboot, no event log record will be created and therefore the function will return a PSCustomObject with status "not found".
+.OUTPUTS
+    PSCustomObject
+.EXAMPLE
+    PS C:\> Test-MBAMRecoveryDbConnectState
+
+    ID       : FBP-MBAM-0002
+    moduleID : TC-MBAM-0002
+    Task     : Administration-website application found and successfully connected to recovery database
+    Status   : Connected
+Passed   : Passed
+.NOTES
+    ID FBP-MBAM-0002
 #>
+[CmdletBinding()]
+Param()
 
-    [CmdletBinding()]
-    Param(
-        # Record ID of logged event
-        [int]$eventRecordID,
-        # Channel in which event was logged
-        [string]$eventChannel
-    )
+    $obj = [TapResult]::New("FBP-MBAM-0002", "TC-MBAM-0002", "Administration-website application found and successfully connected to recovery database")
+    
+    Write-Verbose "[FBP-MBAM-0002]: Get last system startup time"      
+    $lastStartup = Get-SystemStartupTime
 
-    $event = Get-WinEvent -LogName $eventChannel -FilterXPath "<QueryList><Query Id='0' Path='$eventChannel'><Select Path='$eventChannel'>*[System[(EventRecordID=$eventRecordID)]]</Select></Query></QueryList>"
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0002]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0002]"
 
-    $2nl = [System.Environment]::NewLine + [System.Environment]::NewLine
+    try 
+    {
+        # In case the HelpDesk webpage was not called since the last system startup, we trigger a simple call to it, but without a output.
+        # After that the event we will be looking for in the event log should be created, otherwise there is something wrong
+        Test-MBAMHelpDeskPage | Out-Null
 
-    $Body = $event.TaskDisplayName + $2nl
-    $Body += "Host: " + $event.MachineName + $2nl
-    $Body += $event.TimeCreated
-    $body += $2nl + $event.FormatDescription()
+        Write-Verbose "[FBP-MBAM-0002]: Get MBAM event 200 after last system start up"
+        $connected = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM-web/operational";StartTime=$lastStartup;} -ErrorAction Stop | Where-Object {$_.Message -Like "*Recovery database*" -and $_.ID -eq 200}
 
-    Write-Output $Body
+        if ($null -ne $connected)
+        {  
+            # Event was found and connection to database was once established
+            $obj.Status = "Connected"
+            $obj.Passed = 1
+        }
+        else 
+        {
+            # Event still not found, something could be wrong.
+            $obj.Status = "Not connected"
+            $obj.Passed = 2
+
+            $msg = "Event 200 not found: The MBAM administration website application is not connected to a supported version of the Recovery database. For further debugging look for Event 105 in Microsoft-Windows-MBAM-Web/Admin"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 1 -EntryType Error -Category 0 
+        }
+    }
+    catch
+    {
+        $obj.Status = "Not found"
+        $obj.Passed = 4
+
+        $msg = "An error occured getting event id 200 information"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 2 -EntryType Error -Category 0 
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error 
+    }
+
+    Write-Output $obj    
 }
 
-function Test-MbamSQLServerConnection
+function Test-MbamHelpDeskSPNState
 {
-    [CmdletBinding()]
-    Param(
-        # IP-address or DNS of destination
-        [Parameter(Mandatory=$true)]
-        [string]$destination
-    )
+<#
+.Synopsis
+    Tests if the HelpDesk has its Service Principal Name registered successfully.
+.DESCRIPTION
+    Tests if the HelpDesk has its Service Principal Name registered successfully. Therefore the event log is checked for a record with ID 202 and message containing the phrase "HelpDesk" 
+    which was created after last system startup. If the HelpDesk website is not access since last startup, no record is created and the function will return "Not registered" 
+.EXAMPLE
+    PS C:\> Test-MBAMHelpDeskSPNState
 
-    $obj = New-Object PSObject
+    ID       : FBP-MBAM-0005
+    moduleID : TC-MBAM-0004
+    Task     : HelpDesk has its Service Principal Name registered successfully
+    Status   : Registered
+    Passed   : Passed
+.NOTES
+    ID FBP-MBAM-0005
+#>  
+[cmdletBinding()]
+Param()
+    
+    $obj = [TapResult]::New("FBP-MBAM-0005", "TC-MBAM-0004", "HelpDesk has its Service Principal Name registered successfully")
+
+    Write-Verbose "[FBP-MBAM-0005]: Get last system startup time"    
+    $lastStartup = Get-SystemStartupTime
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0005]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0004]"
+
+    try
+    {
+        Write-Verbose "[FBP-MBAM-0005]: Searching for SPN registration event"
+        Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM-web/operational";StartTime=$lastStartup;} `
+            -ErrorAction stop | Where-Object {$_.Message -Like "*HelpDesk*" -and $_.ID -eq 202} | Out-Null
+
+        # Set status, if no log record was found, an ObjectNotFound exception is thrown
+        $obj.Status = "Registered"
+        $obj.Passed = 1 
+    }
+    catch
+    {
+        # No registration logged since last startup
+        $obj.Status = "Not found"
+        $obj.Passed = 2
+
+        $msg = "Event 202 not found: The MBAM /HelpDesk has not registered its SPNs correctly."+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 3 -EntryType Error -Category 0 
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamSelfServiceSPNState
+{
+<#
+.SYNOPSIS
+    Tests if the SelfService Portal has its Service Principal Name registered successfully.
+.DESCRIPTION
+    Tests if the SelfService Portal has its Service Principal Name registered successfully. Therefore the event log is checked for a record with ID 202 and message containing the phrase "SelfService" 
+    which was created after last system startup. If the HelpDesk website is not access since last startup, no record is created and the function will return a PSCustomObject with status "Not found". 
+.EXAMPLE
+    PS C:\Workspace\ipd\Sources\MbamExtensionModule> Test-MBAMSelfServiceSPNState
+
+    ID       : FBP-MBAM-0006
+    moduleID : TC-MBAM-0005
+    Task     : SelfService Portal has its Service Principal Name registered successfully
+    Status   : Registered
+    Passed   : Passed
+.NOTES
+    ID        FBP-MBAM-0006
+    moduleID  TC-MBAM-0005
+#>
+[CmdletBinding()]
+Param()   
+
+    $obj = [TapResult]::New("FBP-MBAM-0006", "TC-MBAM-0005", "SelfService Portal has its Service Principal Name registered successfully")
+    
+    Write-Verbose "[FBP-MBAM-0006]: Get last system startup time"    
+    $lastStartup = Get-SystemStartupTime
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0006]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0005]"
+
+    try
+    {
+        Write-Verbose "[FBP-MBAM-0006]: Searching for SPN registration event"
+        Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM-web/operational";StartTime=$lastStartup;} `
+            -ErrorAction stop | Where-Object {$_.Message -Like "*SelfService*" -and $_.ID -eq 202} | Out-Null
+
+        # Set status, if no log record was found, an ObjectNotFound exception is thrown
+        $obj.Status = "Registered"
+        $obj.Passed = 1
+            
+    }
+    catch
+    {
+        # No registration logged since last startup
+        $obj.Status = "Not found"
+        $obj.Passed = 2
+
+        $msg = "Event 202 not found: The MBAM /SelfServcie has not registered its SPNs correctly."+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 3 -EntryType Error -Category 0 
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamAdminSvcRunning
+{
+<#
+.SYNOPSIS
+    Tests if the MBAM admin web service is running.
+.DESCRIPTION
+    Tests if the MBAM admin web service is running. As we need credentials to load the web service we only request the service and check the answer for a 401 forbidden.
+    With a 401 we asume the service is up and running.
+.PARAMETER url
+    URL of the MBAM server including http:// or https://
+.EXAMPLE
+    PS C:\> Test-MbamAdminSvcRunning -url http://mbam.services.corp.fbpro/
+
+    ID       : FBP-MBAM-0007
+    moduleID : TC-MBAM-0006
+    Task     : Webservice AdministrationService.svc running
+    Status   : Running
+    Passed   : Passed
+.NOTES
+    ID        FBP-MBAM-0007
+    moduleID  TC-MBAM-0006
+#>
+[CmdletBinding()]
+Param(
+    [string]$url
+)   
+
+    Test-MBAMWCFServiceState -serviceType admin -uri $url -id FBP-MBAM-0007 -moduleId TC-MBAM-0006
+}
+
+function Test-MbamUserSvcRunning
+{
+<#
+.SYNOPSIS
+    Tests if the MBAM user web service is running.
+.DESCRIPTION
+    Tests if the MBAM user web service is running. As we need credentials to load the web service we only request the service and check the answer for a 401 forbidden.
+    With a 401 we asume the service is up and running.
+.PARAMETER url
+    URL of the MBAM server including http:// or https://
+.EXAMPLE
+    PS C:\> Test-MbamUserSvcRunning -url http://mbam.service.corp.fbpro
+
+    ID       : FBP-MBAM-0008
+    moduleID : TC-MBAM-0007
+    Task     : Webservice UserSupportService.svc running
+    Status   : Not running
+    Passed   : Failed
+.NOTES
+    ID        FBP-MBAM-0008
+    moduleID  TC-MBAM-0007
+#>
+[CmdletBinding()]
+Param(
+    [string]$url
+)   
+
+    Test-MBAMWCFServiceState -serviceType user -uri $url -id FBP-MBAM-0008 -moduleId TC-MBAM-0007
+}
+
+function Test-MbamStatusReportSvcRunning
+{
+<#
+.SYNOPSIS
+    Tests if the MBAM status report web service is running.
+.DESCRIPTION
+    Tests if the MBAM status report web service is running. As we need credentials to connect to the web service we only request the service and check the answer for a 401 forbidden.
+    With a 401 we asume the service is up and running.
+.PARAMETER url
+    URL of the MBAM server including http:// or https://
+.EXAMPLE
+    PS C:\> Test-MbamStatusReportSvcRunning -url http://mbam.services.corp.fbpro
+
+    ID       : FBP-MBAM-0009
+    moduleID : TC-MBAM-0008
+    Task     : Webservice StatusReportingService.svc running
+    Status   : Running
+    Passed   : Passed
+.NOTES
+    ID        FBP-MBAM-0009
+    moduleID  TC-MBAM-0008
+#>
+[CmdletBinding()]
+Param(
+    [string]$url
+)   
+
+    Test-MBAMWCFServiceState -serviceType report -uri $url -id FBP-MBAM-0009 -moduleId TC-MBAM-0008
+}
+
+function Test-MbamCoreSvcRunning
+{
+<#
+.SYNOPSIS
+    Tests if the MBAM core web service is running.
+.DESCRIPTION
+    Tests if the MBAM cire web service is running. As we need credentials to connect to the web service we only request the service and check the answer for a 401 forbidden.
+    With a 401 we asume the service is up and running.
+.PARAMETER url
+    URL of the MBAM server including http:// or https://
+.EXAMPLE
+    PS C:\> Test-MbamStatusReportSvcRunning -url http://mbam.services.corp.fbpro
+
+    ID       : FBP-MBAM-0009
+    moduleID : TC-MBAM-0008
+    Task     : Webservice StatusReportingService.svc running
+    Status   : Running
+    Passed   : Passed
+.NOTES
+    ID        FBP-MBAM-0010
+    moduleID  TC-MBAM-0009
+#>
+[CmdletBinding()]
+Param(
+    [string]$url
+)   
+
+    Test-MbamWCFServiceState -serviceType report -uri $url -id FBP-MBAM-0010 -moduleId TC-MBAM-0009
+}
+
+function Test-MbamHelpDeskSslOnly
+{
+<#
+.Synopsis
+    Checks, if the MBAM webpages for HelpDesk is only reachable on https.
+.DESCRIPTION
+    Checks, if the MBAM webpages for HelpDesk is only reachable on https.
+.NOTES
+    ID        FBP-MBAM-0011
+    moduleID  TC-MBAM-0011
+#>
+[CmdletBinding()]
+Param()
+
+    $server = Get-MBAMHostname
+    $helpdesk = Get-MBAMWebApplication -AdministrationPortal | Select-Object -ExpandProperty VirtualDirectory  
+
+    $obj = [TapResult]::New("FBP-MBAM-0011", "TC-MBAM-0011", "HelpDesk page $server$helpdesk is only reachable over SSL connection")
+
+    $https = Test-MBAMHelpDeskPage -https
+    $http = Test-MBAMHelpDeskPage 
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0011]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0011]"  
+
+    if (($https.Passed -eq 1) -and ($http.Passed -eq 2))
+    {
+        $obj.Status = "Only reachable over https"
+        $obj.Passed = 1
+    }
+    elseif (($https.Passed -eq 1) -and ($http.Passed -eq 1))
+    {
+        $obj.Status = "Reachable over https and http"
+        $obj.Passed = 3
+
+        $msg = "The MBAM HelpDesk site is also reachable over http"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 4 -EntryType Warning -Category 0 
+    }
+    elseif (($https.Passed -eq 2) -and ($http.Passed -eq 1))
+    {
+        $obj.Status = "Only reachable over http"
+        $obj.Passed = 2
+
+        
+        $msg = "The MBAM HelpDesk site is only reachable over http"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 5 -EntryType Error -Category 0 
+    }
+    else
+    {
+        $obj.Status = "Not reachable at all"
+        $obj.Passed = 4
+       
+        $msg = "The MBAM HelpDesk site is not reachable"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 6 -EntryType Error -Category 0 
+    }
+        
+    Write-Output $obj
+}
+
+function Test-MbamSelfServiceSslOnly
+{
+<#
+.Synopsis
+    Checks, if the MBAM webpage for SelfService is only reachable on https.
+.DESCRIPTION
+    Checks, if the MBAM webpage for SelfService is only reachable on https.
+.NOTES
+    ID        FBP-MBAM-0012
+    moduleID  TC-MBAM-0012
+#>
+[CmdletBinding()]
+Param()
+
+    $server = Get-MBAMHostname
+    $selfservice = Get-MBAMWebApplication -SelfServicePortal | Select-Object -ExpandProperty VirtualDirectory  
+
+    $obj = [TapResult]::New("FBP-MBAM-0012", "TC-MBAM-0012", "SelfService page $server$selfservice is only reachable over SSL connection")
+
+    $https = Test-MBAMSelfServicePage -https
+    $http = Test-MBAMSelfServicePage
+        
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0012]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0012]"  
+
+    if (($https.Passed -eq 1) -and ($http.Passed -eq 2))
+    {
+        $obj.Status = "Only reachable over https"
+        $obj.Passed = 1
+    }
+    elseif (($https.Passed -eq 1) -and ($http.Passed -eq 1))
+    {
+        $obj.Status = "Reachable over https and http"
+        $obj.Passed = 3
+
+        $msg = "The MBAM SelfService site is also reachable over http"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 7 -EntryType Warning -Category 0 
+    }
+    elseif (($https.Passed -eq 2) -and ($http.Passed -eq 1))
+    {
+        $obj.Status = "Only reachable over http"
+        $obj.Passed = 2
+       
+        $msg = "The MBAM SelfService site is only reachable over http"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 8 -EntryType Error -Category 0 
+    }
+    else
+    {
+        $obj.Status = "Not reachable at all"
+        $obj.Passed = 4
+
+        $msg = "The MBAM SelfService site is not reachable"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 9 -EntryType Error -Category 0 
+    }
+        
+    Write-Output $obj
+}
+
+function Test-MbamSQLSrvConnection
+{
+[CmdletBinding()]
+Param(
+    # IP-address or DNS of destination
+    [Parameter(Mandatory=$true)]
+    [string]$destination,
+
+    [Parameter(Mandatory=$true)]
+    [String]$Id,
+
+    [String]$moduleId
+)
+
+    $obj = [TapResult]::New($Id, $moduleId, "SQL Server $destination is reachable")
         
     try 
     {
-            $result = Test-Connection $destination 
+            $result = Test-Connection $destination -ErrorAction SilentlyContinue
 
-            if ($result -ne $null)
+            if ($null -ne $result)
             {
-                $obj | Add-Member NoteProperty Status("Reachable")
-                $obj | Add-Member NoteProperty Passed("true")
+                $obj.Status = "Reachable" 
+                $obj.Passed = 1
             }
             else
             {
-                $obj | Add-Member NoteProperty Status("Not reachable")
-                $obj | Add-Member NoteProperty Passed("false")
+                $obj.Status = "Not reachable"
+                $obj.Passed = 2
             }
         }
     catch
     {
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamComplianceDbSrvConnection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+{  
+<#
+.Synopsis
+    Checks, if the SQL Server of the compliance database is reachable.
+.DESCRIPTION
+    Checks, if the SQL Server of the compliance database is reachable. Reachable means that the SQL server is reachable on the network, e.g. by ping.
+.NOTES
+    ID        FBP-MBAM-0013
+    moduleID  TC-MBAM-0013
+#>
+[CmdletBinding()]
+Param()
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0013]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0013]"  
+
+    try 
+    {
+        $connectionString = Get-MBAMWebApplication -AdministrationPortal -ErrorAction Stop | Select-Object -ExpandProperty ComplianceAndAuditDBConnectionString
+
+        if($connectionString.Contains('\'))
+        {
+            # named sql instance
+            $destination = $connectionString.Substring(12, $connectionString.LastIndexOf('\')-12)
+        }
+        else
+        {
+            # standard sql instance
+            $destination = $connectionString.Substring(12, $connectionString.IndexOf(';')-12)
+        }
+
+        $obj = Test-MbamSQLSrvConnection -Id "FBP-MBAM-0013" -moduleId "TC-MBAM-0013" $destination -ErrorAction SilentlyContinue
+        $obj.Task = "SQL Server of Compliance and Audit database $destination is reachable"
+
+        if ($obj.Passed -eq 2)
+        {
+            $msg = "The SQL Server of the MBAM compliance and audit database could not be reach"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 10 -EntryType Error -Category 0 
+        }
+    }
+    catch
+    {
+        $obj = [TapResult]::New("FBP-MBAM-0013", "TC-MBAM-0013", "SQL Server of MBAM Compliance and Audit database is reachable")
+        $obj. Status = "An error occured"
+        $obj.Passed = 4
+
+        # log error into log file and event log
+        $e = $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "An error occured reaching the SQL Server of the MBAM compliance and audit database"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 11 -EntryType Error -Category 0 
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamRecoveryDbSrvConnection
+{
+<#
+.Synopsis
+    Checks, if the SQL Server of the recovery database is reachable.
+.DESCRIPTION
+    Checks, if the SQL Server of the recovery database is reachable. Reachable means that the SQL server is reachable on the network, e.g. by ping.
+.NOTES
+    ID        FBP-MBAM-0014
+    moduleID  TC-MBAM-0014
+#>
+[CmdletBinding()]
+Param()
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0014]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0014]"  
+
+    try
+    {
+
+        $connectionString = Get-MBAMWebApplication -AdministrationPortal -ErrorAction Stop| Select-Object -ExpandProperty RecoveryDBConnectionString
+
+        if($connectionString.Contains('\'))
+        {
+            # named sql instance
+            $destination = $connectionString.Substring(12, $connectionString.LastIndexOf('\')-12)
+        }
+        else
+        {
+            # standard sql instance
+            $destination = $connectionString.Substring(12, $connectionString.IndexOf(';')-12)
+        }
+
+        $obj = Test-MbamSQLSrvConnection -Id "FBP-MBAM-0014" -moduleId "TC-MBAM-0014" $destination -ErrorAction SilentlyContinue
+        $obj.Task = "SQL Server of Recovery database $destination is reachable"
+
+        if ($obj.Passed -eq 2)
+        {
+            $msg = "The SQL Server of the MBAM Recovery database could not be reach"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 12 -EntryType Error -Category 0 
+        }
+    }
+    catch
+    {
+        $obj = [TapResult]::New("FBP-MBAM-0014", "TC-MBAM-0014", "SQL Server of MBAM Recovery database is reachable")
+        $obj. Status = "An error occured"
+        $obj.Passed = 4
+
+        # log error into log file and event log
+        $e = $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "An error occured reaching the SQL Server of the MBAM Recovery database"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 13 -EntryType Error -Category 0 
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamHelpDeskPage
+{
+<#
+.Synopsis
+    Checks, if the HelpDesk page is reachable
+.DESCRIPTION
+    Checks, if the HelpDesk page is reachable. 
+.NOTES
+    ID        FBP-MBAM-0015
+    moduleID  TC-MBAM-0015
+#>
+[CmdletBinding()]
+Param(
+    # Opend web site with TLS 
+    [switch]$https
+)    
+    $obj = [TapResult]::New("FBP-MBAM-0015", "TC-MBAM-0015", "HelpDesk page $server$helpdesk is reachable")
+           
+    try
+    {
+        try
+        {
+            $server = Get-MBAMHostname
+           
+            $helpdesk = Get-MBAMWebApplication -AdministrationPortal -ErrorAction Stop | Select-Object -ExpandProperty VirtualDirectory 
+  
+            $protocol = @{$true = "https://"; $false = "http://"}[$https -eq $true] 
+        }
+        catch
+        {
+            $errorMessage = "Could not retrieve hostname or virtual directory of MBAM HelpDesk page"
+            $errorMessage += $_.Exception
+            Write-LogFile -Path $LogPath -name $LogName -message $errorMessage -Level Error
+        }
+
+        # webrequest should fail because we did not pass credentials, but if we Get a 401, the page is running
+        Invoke-WebRequest -URI ($protocol+$server+$helpdesk)
+    }
+            
+    # catch expected 401 error
+    catch [System.Net.WebException]
+    {
+        # let's check if we are not authorized, which in this case is good because the page seems to be running
+        if ($_.ErrorDetails.Message -like "*401.2*")
+        {
+            $obj.Status = "Reachable"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Not reachable"
+            $obj.Passed = 2
+        }      
+    }
+    
+    # catch unexpected errors
+    catch
+    {
+        $obj.Status = "Not reachable"
+        $obj.Passed = 4
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+
+    Write-Output $obj
+    
+}
+
+function Test-MbamSelfServicePage
+{
+<#
+.Synopsis
+    Checks, if the HelpDesk page is reachable
+.DESCRIPTION
+    Checks, if the HelpDesk page is reachable. At this time it only checks https connections. 
+.NOTES
+    ID        FBP-MBAM-0016
+    moduleID  TC-MBAM-0016
+#>
+[CmdletBinding()]
+Param(
+    # Check with SSL connection
+    [switch]$https
+)
+    
+    $obj = [TapResult]::New("FBP-MBAM-0016", "TC-MBAM-0016", "SelfService page $server$selfservice is reachable")
+    
+    try
+    {
+        try
+        {
+            $server = Get-MBAMHostname
+
+            $selfservice = Get-MBAMWebApplication -SelfServicePortal | Select-Object -ExpandProperty VirtualDirectory 
+ 
+            $protocol = @{$true = "https://"; $false = "http://"}[$https -eq $true] 
+        }
+        catch
+        {
+            $errorMessage = "Could not retrieve hostname or virtual directory of MBAM SelfService page"
+            $errorMessage += $_.Exception
+            Write-LogFile -Path $LogPath -name $LogName -message $errorMessage -Level Error
+        }
+
+        # webrequest should fail because we did not pass credentials, but if we Get a 401, the page is running
+        Invoke-WebRequest -URI ($protocol+$server+$selfservice)
+    }
+
+    # catch expected 401 error
+    catch [System.Net.WebException]
+    {
+        # let's check if we are not authorized, which in this case is good because the page seems to be running
+        if ($_.ErrorDetails.Message -like "*401.2*")
+        {
+            $obj.Status = "Reachable"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Not reachable"
+            $obj.Passed = 2
+        }
+    }
+    catch
+    {  
+        $obj.Status = "Not reachable"
+        $obj.Passed = 4
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamSrvFeatureInstalled
+{
+<#
+.Synopsis
+    Checks, if the MBAM Server features are installed.
+.DESCRIPTION
+    Checks, if the MBAM Server features are installed.
+.NOTES
+    ID        FBP-MBAM-0029
+    moduleID  TC-MBAM-0061
+#>
+[CmdletBinding()]
+Param()
+    
+    $obj = [TapResult]::New("FBP-MBAM-0029", "TC-MBAM-0061", "The MBAM server features are installed")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Install\ServerFeatures"
+    $registryKey = "Installed"
+    $regValue = 1
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0029]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0061]"  
+
+    try 
+    {
+        Write-Verbose "[FBP-MBAM-0029]:Checking registry entry of MBAM Server installation"
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        if ($regEntry -eq $regValue) 
+        {
+            $obj.Status = "Features installed"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Features not installed (Registry mismatch)"
+            $obj.Passed = 2
+
+            $msg = "MBAM Features not installed (Registry mismatch)"+[System.Environment]::NewLine
+            $msg += $messageBag+[System.Environment]::NewLine
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 15 -EntryType Error -Category 0
+        }   
+    }
+
+    catch
+    {
+        $obj.Status = "Features not installed (Registry key not found)"
+        $obj.Passed = 4
+
+        # log error into log file and event log
+        $e = $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "MBAM Features not installed (Registry key not found)"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 14 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamHelpDeskPortalVersion
+{
+<#
+.Synopsis
+    Checks,if the version of the MBAM Adminstration Portal is correct.
+.DESCRIPTION
+    Checks,if the version of the MBAM Adminstration Portal is correct.
+.PARAMETER version
+    The expected version number of the HelpDesk portal
+.NOTES
+    ID        FBP-MBAM-0030
+    moduleID  TC-MBAM-0051
+#>
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string] $version
+)
+    
+    $obj = [TapResult]::New("FBP-MBAM-0030", "TC-MBAM-0051", "The MBAM Server HelpDesk(Administration) Portal version is correct")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Version\"
+    $registryKey = "AdministrationPortal"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0030]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0051]"  
+
+    try 
+    {
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        if ($regEntry -eq $version)
+        {
+            $obj.Status = "Version correct, installed version is $regEntry"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Version not correct, installed is $regEntry"
+            $obj.Passed = 3
+
+            $msg = "The MBAM Server HelpDesk(Administration) Portal version is not correct."+[System.Environment]::NewLine
+            $msg += "Expected version $version, found version $regEntry."+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 17 -EntryType Warning -Category 0
+        }      
+    }
+    catch
+    {
+        $obj.Status = "Not installed"
+        $obj.Passed = 2
+
+        # log error into log file and event log
+        $e = $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "The MBAM Server HelpDesk(Administration) Portal is not installed"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 16 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamSelfSvcPortalVersion
+{
+<#
+.Synopsis
+    Checks,if the version of the MBAM SelfService Portal is correct.
+.DESCRIPTION
+    Checks,if the version of the MBAM SelfService Portal is correct. Also checks, if the SelfService is expected to be active.
+.PARAMETER version
+    The expected version of the SelfService portal
+.PARAMETER enabled
+    Switch to indicated, if the SelfService portal is expected to be active
+.NOTES
+    ID        FBP-MBAM-0031
+    moduleID  TC-MBAM-0052
+#>
+
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string] $version,
+
+    [switch]$enabled
+)
+    
+    $obj = [TapResult]::New("FBP-MBAM-0031", "TC-MBAM-0052", "The MBAM server SelfService Portal version is correct")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Version\"
+    $registryKey = "SelfServicePortal"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0031]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0052]"  
+
+    try 
+    {
+        Write-Verbose "[FBP-MBAM-0031]:Getting registry entry"
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        Write-Verbose "[FBP-MBAM-0031]:Compare versions"
+        if (($regEntry -eq $version) -and $enabled)
+        {
+            $obj.Status = "Version correct, installed version is $regEntry"
+            $obj.Passed = 1
+        }
+        elseif (($regEntry -eq $version) -and -not $enabled)
+        {
+            $obj.Status = "Version correct, but portal expected as disabled"
+            $obj.Passed = 3
+
+            $msg = "The MBAM SelfService portal version is correct, but feature is expected to be disabled."+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 18 -EntryType Warning -Category 0
+        } 
+        elseif (($regEntry -ne $version) -and $enabled)
+        {
+            $obj.Status = "Version not correct, installed version is $regEntry"
+            $obj.Passed = 3
+
+            $msg = "The MBAM SelfService portal version not correct, found version $regEntry, expected $version."+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 19 -EntryType Warning -Category 0
+        }
+        elseif (($regEntry -ne $version) -and -not $enabled)
+        {
+            $obj.Status = "Version not correct and SelfService unexpectedly active"
+            $obj.Passed = 2
+
+            $msg = "The MBAM SelfService portal unexpectedly active, also version mismatch, found $regEntry, should be $version."+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 20 -EntryType Error -Category 0
+        }          
+    }
+    catch
+    {
+        # a registry entry is not found but Self-Service Portal should be enabled
+        if($enabled)
+        {
+            # this leads to an error, because it is not installed
+            $obj.Status = "Not installed"
+            $obj.Passed = 4
+
+            # log error
+            $e = $_.Exception.toString()
+            $e += "; " + $_.ScriptStackTrace.toString()
+            write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+            $msg = "The MBAM SelfService portal is not active, version check not possible."+[System.Environment]::NewLine
+            $msg += $messageBag+[System.Environment]::NewLine
+            $msg += $e
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 21 -EntryType Error -Category 0
+        }
+        # a registry entry is not found and the Self-Service Portal should be disabled
+        else
+        {
+            # all good
+            $obj.Status = "Not installed"
+            $obj.Passed = 1
+        }
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamSrvAgentSvcVersion
+{
+<#
+.Synopsis
+    Checks,if the version of the MBAM Server Agent Service is correct.
+.DESCRIPTION
+    Checks,if the version of the MBAM Server Agent Service is correct.
+.PARAMETER
+    The expected version number of the MBAM agent service
+.NOTES
+    ID        FBP-MBAM-0032
+    moduleID  TC-MBAM-0053
+#>
+
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string] $version
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0032", "TC-MBAM-0053", "The MBAM Server Agent Service version is correct")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Version\"
+    $registryKey = "AgentServices"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0032]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0053]"  
+
+    try 
+    {
+        Write-Verbose "[FBP-MBAM-0032]:Getting registry entry"
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        Write-Verbose "[FBP-MBAM-0032]:Compare versions"
+        if ($regEntry -eq $version)
+        {
+            $obj.Status = "Version correct, installed version is $regEntry"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status("Version not correct, installed is $regEntry")
+            $obj.Passed = 3
+
+            $msg = "The MBAM Server Agent Service version is not correct, found version $regEntry, expected $version."+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 22 -EntryType Warning -Category 0
+        }      
+    }
+    catch
+    {
+        $obj.Status = "Not installed"
+        $obj.Passed = 4
+
+        # log error
+        $e = $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "The MBAM Server Agent Service was not found."+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 23 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+
+}
+
+function Test-MbamSrvAgentSvcEnabled 
+{
+<#
+.Synopsis
+    Checks,if the MBAM Agent Service is activated in the registry.
+.DESCRIPTION
+    Checks,if the MBAM Agent Service is activated in the registry.
+.NOTES
+    ID        FBP-MBAM-0033
+    moduleID  TC-MBAM-0054
+#>
+[cmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0033", "TC-MBAM-0054", "The MBAM Server Agent Service is enabled")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Enabled\"
+    $registryKey = "AgentServices"
+    $registryValue = "1"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0033]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0054]" 
+
+    try 
+    { 
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        if ($regEntry -eq $registryValue)
+        {
+            $obj.Status = "Enabled"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Disabled"
+            $obj.Passed = 2
+
+            $msg = "The MBAM Server Agent Service is disabled"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 24 -EntryType Error -Category 0
+        }      
+    }
+    catch
+    {
+        $obj.Status = "Not installed"
+        $obj.Passed = 4
+
+        # log error
+        $e = "FBP-MBAM-0033: "+$_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "The MBAM Server Agent Service was not found"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 23 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamAdminPortalEnabled 
+{
+<#
+.Synopsis
+   Checks,if the MBAM Adminstration Portal is activated in the registry.
+.DESCRIPTION
+   Checks,if the MBAM Adminstration Portal is activated in the registry.
+.NOTES
+    ID        FBP-MBAM-0034
+    moduleID  TC-MBAM-0055
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0034", "TC-MBAM-0055", "The MBAM Server HelpDesk(Administration) Portal is enabled")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Enabled\"
+    $registryKey = "AdministrationPortal"
+    $registryValue = "1"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0034]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0055]" 
+
+    try 
+    {
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        if ($regEntry -eq $registryValue)
+        {
+            $obj.Status = "Enabled"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Disabled"
+            $obj.Passed = 2
+
+            $msg = "The MBAM HelpDesk(Administration) Portal is disabled"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 26 -EntryType Error -Category 0
+        } 
+      
+    }
+    catch
+    {
+        $obj.Status = "Not installed"
+        $obj.Passed = 4
+
+        # log error
+        $e = "FBP-MBAM-0034: "+$_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "The MBAM HelpDesk(administration) Portal was not found in the registry."+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 25 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+
+}
+
+function Test-MbamSelfSvcPortalEnabled 
+{
+<#
+.Synopsis
+   Checks,if the MBAM Self-Service Portal is enabled in the registry.
+.DESCRIPTION
+   Checks,if the MBAM Self-Service Portal is enabled in the registry. As the Self-Service Portal is optional for ongoing MBAM operation,
+   the test will return false if the Self-Service Portal is enabled but not expected to be enabled. You can indicate the expected status with
+   the enabled switch.
+   Enabled true => Found Self-Service => true
+   Enabled true => No Self-Service => false
+   Enabled false => Found Self-Service => false
+   Enabled false => No Self-Service => true
+.PARAMETER enabled
+   Switch to indicated the expected status of the SelfService Portal
+.NOTES
+    ID        FBP-MBAM-0035
+    moduleID  TC-MBAM-0056
+#>
+[CmdletBinding()]
+Param(
+    [switch]$enabled
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0035", "TC-MBAM-0056", "The MBAM SelfService Portal is enabled") 
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Enabled\"
+    $registryKey = "SelfServicePortal"
+    $registryValue = "1"
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0035]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0055]" 
+
+    try 
+    {
+        Write-Verbose "[FBP-MBAM-0035]: Getting registry entry"
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        Write-Verbose "[FBP-MBAM-0035]: Checking if SelfService is enabled"
+        # SelfService Portal enabled and like it should
+        if (($regEntry -eq $registryValue) -and $enabled)
+        {
+            $obj.Status = "Enabled"
+            $obj.Passed = 1
+        }
+        # SelfService Portal enabled but should be disabled
+        elseif (($regEntry -eq $registryValue) -and -not $enabled)
+        {
+            $obj.Status = "Enabled, but expected as disabled"
+            $obj.Passed = 3
+
+            $msg = "The MBAM SelfService Portal is enabled but expected as disabled"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 29 -EntryType Warning -Cat
+        }
+        # SelfService not enabled but should be
+        elseif (($regEntry -ne $registryValue) -and $enabled)
+        {
+            $obj.Status = "Disabled, but expected enabled"
+            $obj.Passed = 3
+
+            $msg = "The MBAM SelfService Portal is disabled"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 28 -EntryType Warning -Category 0
+        }
+        # SelfService not enabled, test passed
+        else
+        {
+            $obj.Status = "Disabled"
+            $obj.Passed = 1
+        }        
+    }
+
+    catch
+    {
+        # a registry entry is not found but Self-Service Portal should be enabled
+        if($enabled)
+        {
+            $obj.Status = "Not enabled"
+            $obj.Passed = 2
+
+            # log error
+            $e = "FBP-MBAM-0035: The SelfService Portal not found in the registry"+[System.Environment]::NewLine+$_.Exception.toString()
+            $e += "; " + $_.ScriptStackTrace.toString()
+            write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+            $msg = "The MBAM SelfService Portal was not found in the registry."+[System.Environment]::NewLine
+            $msg += $messageBag+[System.Environment]::NewLine
+            $msg += $e
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 27 -EntryType Error -Category 0
+        }
+
+        # a registry entry is not found and the Self-Service Portal should not be enabled
+        else
+        {
+            # test case is passed
+            $obj.Status = "Not enabled"
+            $obj.Passed = 1
+        }
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamHelpDeskVirtualDir
+{
+<#
+.Synopsis
+    Checks, if the MBAM HelpDesk Virtual Directory is correct.
+.DESCRIPTION
+    Checks, if the MBAM HelpDesk Virtual Directory is correct.
+.PARAMETER virtualDirectory
+    The name of the virtual directory
+.NOTES
+    ID        FBP-MBAM-0036
+    moduleID  TC-MBAM-0059
+#>
+[CmdletBinding()]
+Param(
+    [string]$virtualDirectory = "/HelpDesk"
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0036", "TC-MBAM-0059", "The MBAM HelpDesk Virtual Directory is correct")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Web\"
+    $registryKey = "HelpDeskVirtualDirectory"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0036]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0059]"
+
+    try 
+    {
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey 
+
+        if ($regEntry -eq $virtualDirectory)
+        {
+            $obj.Status = "Directory name correct ($virtualDirectory)"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Directory name not correct, found $regEntry"
+            $obj.Passed = 2
+
+            $msg = "HelpDesk Virtual Directory name not correct, found $registryPath instead."+[System.Environment]::NewLine
+            $msg += $messageBag+[System.Environment]::NewLine
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 31 -EntryType Error -Category 0
+        }      
+    }
+    catch
+    {
+        $obj.Status = "Not found"
+        $obj.Passed = 4
+
+        # log error
+        $e = "No entry for the HelpDesk Virtual Directory found in the registry"
+        $e += $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "No entry for the HelpDesk Virtual Directory found in the registry"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 30 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamSelfSvcVirtualDir
+{
+<#
+.Synopsis
+    Checks, if the MBAM SelfService Portal Virtual Directory is correct.
+.DESCRIPTION
+    Checks, if the MBAM SelfService Portal Virtual Directory is correct.
+.PARAMETER virtualDirectory
+    The name of the virtual directory
+.PARAMETER enabled
+    Switch if the SelfService is expected to be enabled or not
+.NOTES
+    ID        FBP-MBAM-0037
+    moduleID  TC-MBAM-0060
+#>
+[CmdletBinding()]
+Param(
+    [string]$virtualDirectory = "/SelfService",
+
+    [switch]$enabled
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0037", "TC-MBAM-0060", "The MBAM SelfService Portal Virtual Directory is correct")
+
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\MBAM Server\Web\"
+    $registryKey = "SelfServicePortalVirtualDirectory"
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0037]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0060]"
+
+    try 
+    {
+        $regEntry = Get-ItemProperty $registryPath -ErrorAction Stop | Select-Object -ExpandProperty $registryKey
+
+        if (($regEntry -eq $virtualDirectory) -and $enabled)
+        {
+            $obj.Status = "Directory name correct ($virtualDirectory)"
+            $obj.Passed = 1
+        }
+        elseif (($regEntry -eq $virtualDirectory) -and -not $enabled)
+        {
+            $obj.Status = "Directory name correct $regEntry, but feature expected as disabled"
+            $obj.Passed = 3
+        }
+        elseif (($regEntry -ne $virtualDirectory) -and $enabled)
+        {
+            $obj.Status("Directory name not correct, found $regEntry, expected $virtualDirectory")
+            $obj.Passed = 2
+        } 
+        else
+        {
+            $obj.Status("Directory name not correct, found $regEntry, expected $virtualDirectory. Feature also expected as disabled")
+            $obj.Passed = 2
+        }      
+    }
+    catch
+    {
+        $obj.Status = "Entry not found"
+        $obj.Passed = 4
+
+        # log error
+        $e = "No entry for the Self-Service Portal Virtual Directory found"
+        $e += $_.Exception.toString()
+        $e += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $e -Level Error
+
+        $msg = "No entry for the Self-Service Portal Virtual Directory found in the registry"+[System.Environment]::NewLine
+        $msg += $messageBag+[System.Environment]::NewLine
+        $msg += $e
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 32 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamServerVersion 
+{ 
+<#
+.Synopsis
+   Checks, if MBAM-Server main version is correct
+.DESCRIPTION
+   Checks, if the main version number of the installed MBAM-Server is correct. Does not check version number of features like HelpDesk or SelfService.
+   Use Test-MbamHelpDeskPortalVersion or Test-MbamSelfSvcPortalVersion instead. 
+   Targets installation with version numbers greater 2.5
+.PARAMETER version 
+    The MBAM servers expected main version number 
+.NOTES
+    ID        FBP-MBAM-0038
+    moduleID  TC-MBAM-0032
+#>
+[CmdletBinding()]  
+Param(
+    # Version number
+    [Parameter(Mandatory=$true)]
+    [String]$version
+)
+    
+    $obj = [TapResult]::New("FBP-MBAM-0038", "TC-MBAM-0032", "The MBAM Server main version number is correct")
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0038]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0032]"
+
+    try 
+    {
+        $currentVersion = Get-Item 'HKLM:\SOFTWARE\Microsoft\MBAM Server' -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty "Installed"
+        
+        if ($version -eq $currentVersion)
+        {
+            $obj.Status = "Version correct, installed version is $currentVersion"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "Versions differ, installed version is $currentVersion"
+            $obj.Passed = 3
+
+            $msg = "MBAM main version differ from expected, installed version is $currentVersion"+[System.Environment]::NewLine
+            $msg += $messageBag
+            Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 33 -EntryType Warning -Category 0
+        }
+    }
+    catch 
+    {
+        $obj.Status = "No MBAM-Server Version >= 2.5 found"
+        $obj.Passed = 4
+        Write-LogFile -Path $LogPath -name $LogName -Message "Could not retrieve MBAM version. No registry entry for MBAM version >= 2.5 found"  -Level Error
+
+        $msg = "Could not retrieve MBAM version. No registry entry for MBAM version 2.5 SP1 or later found"+[System.Environment]::NewLine
+        $msg += $messageBag
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 34 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamCertificateThumbprint
+{
+<#
+.Synopsis
+   Checks, if the MBAM Server TLS certificate is correct
+.DESCRIPTION
+   Checks, if the main version number of the installed MBAM-Server is correct. Does not check version number of features like HelpDesk or SelfService.
+   Use Test-MbamHelpDeskPortalVersion or Test-MbamSelfSvcPortalVersion instead. 
+   Targets installation with version numbers greater 2.5
+.PARAMETER thumbprint 
+    The expected TLS thumbprint
+.NOTES
+    ID        FBP-MBAM-0039
+    moduleID  TC-MBAM-0010
+#>
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$thumbprint
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0039", "TC-MBAM-0010", "The MBAM server TLS certificate thumbprint is correct")
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-MBAM-0039]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [TC-MBAM-0010]"
+    
+    Write-Verbose "[FBP-MBAM-0039]: Getting MBAM TLs certificate thumbprint"
+    # get the actual thumbprint of MBAM
+    $actualThumbprint = Get-MBAMWebApplication -AdministrationPortal | Select-Object -ExpandProperty CertificateThumbprint
+
+    Write-Verbose "[FBP-MBAM-0039]: Comparing thumbprint to expected one"
+    # do the thumbprints match?
+    if($actualThumbprint -eq $thumbprint)
+    {
+        $obj.Status = "Thumbprint is correct"
+        $obj.Passed = 1
+    }
+    else
+    {
+        $obj.Status = "Thumbprint is not correct"
+        $obj.Passed = 2
+
+        $msg = "The MBAM TLS certificate thumbprint is not correct, found $actualThumbprint"+[System.Environment]::NewLine
+        $msg += $messageBag
+
+        Write-LogFile -Path $LogPath -name $LogName -Message $msg  -Level Error
+        Write-EventLog -LogName "FBPRO-TAP" -Source "MBAM-TAP" -Message $msg -EventId 35 -EntryType Error -Category 0
+    }
+
+    Write-Output $obj
+}
+
+
+#endregion
+
+
+#region 1.2 MBAM client tests
+# ---------------------------
+#
+# Section for tests targeting the MBAM backend service
+#=====================================================
+
+function Test-MbamOsDiskProtectionStatus
+{
+<#
+.SYNOPSIS
+    Checks the protection status of the operating system drive
+.DESCRIPTION
+    Checks the protection status of the operating system drive. Protection status is ok if drive is encrypted and 
+    protection is on.
+.EXAMPLE
+
+.NOTES
+    ID           FBP-MBAM-0017
+    Module ID    TC-MBAM-0025
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0017", "TC-MBAM-0025", "The operating system drive is 100 % encrypted and protection is on")    
+    
+    try 
+    {
+        if (get-Module -Name BitLocker)
+        {
+            $volume = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction Stop
+
+            if ($volume.ProtectionStatus -eq "On") 
+            {
+                $obj.Status = "Protected and encrypted"
+                $obj.Passed = 1
+            }
+            elseif (($volume.ProtectionStatus -eq "Off") -and ($volume.VolumeStatus -eq "FullyEncrypted"))
+            {
+                $obj.Status = "Encrypted but protection is off"
+                $obj.Passed = 2
+            }
+            else
+            {
+                $obj.Status = "Not protected"
+                $obj.Passed = 2
+            }
+        }
+        else
+        {
+            $volume = Get-CimInstance -namespace root\CIMv2\Security\MicrosoftVolumeEncryption -class Win32_EncryptableVolume -filter "DriveLetter = `"$env:SystemDrive`""
+
+            if ($volume.ProtectionStatus -eq 1)
+            {
+                $obj.Status = "Protected and encrypted"
+                $obj.Passed = 1
+            }
+            else
+            {
+                # protection status is 0 
+                switch($volume.ConverstionStatus)
+                {
+                    1 { $obj.Status = "Encrypted but protection is off" # protection is suspended
+                        $obj.Passed = 2
+                        }
+                    2 { $obj.Status = "Not protected (encryption in progress)" # protection is off because volume is not yet fully encrypted
+                        $obj.Passed = 2
+                        }
+                    3 { $obj.Status = "Not protected (decryption in progress)" # protection is off because volume will be decrypted
+                        $obj.Passed = 2
+                        }
+                    default {   $obj.Status = "Not protected (fully decrypted)" # protection is off
+                                $obj.Passed = 2
+                            }
+                }
+            }
+        }
+    }
+    catch 
+    {
+        $obj.Status = "An error occurred, see logfile for more info."
+        $obj.Passed = 4
+        
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamDriveProtectionStatus
+{
+<#
+.SYNOPSIS 
+   Checks the protection status of all local drives.
+.DESCRIPTION
+   Checks the protection status of all fixed and removable drives. Rom drives like CD oder DVD are not included. 
+   Protection status is ok if drive is encrypted and protection is on.
+.OUTPUTS
+    One protection status per given mounting point entry
+.EXAMPLE
+    Test-MBAMDriveProtectionStatus
+.NOTES
+    ID  FBP-MBAM-0018
+    Module ID   TC-MBAM-0026
+#>    
+[CmdletBinding()]
+Param()
+    
+    try 
+    {
+        if (get-Module -Name BitLocker)
+        {
+            $mountPoints = Get-Volume | Where-Object {($_.DriveType -like "Fixed") -OR ($_.DriveType -like "Removable")} 
+            $i = 1
+
+            foreach($mountPoint in $mountPoints)
+            {
+                $obj = [TapResult]::New("FBP-MBAM-0018.$i", "TC-MBAM-0026.$i", "The "+$mountPoint.DriveType+" Drive "+$mountPoint.DriveLetter+" is encrypted and protection is on")
+
+                $volume = Get-BitLockerVolume -MountPoint $mountPoint.DriveLetter 
+
+                if (($volume.ProtectionStatus -eq "On") -and ($volume.VolumeStatus -eq "FullyEncrypted"))
+                {
+                    $obj.Status = "Encrypted and protection is on"
+                    $obj.Passed = 1
+                }
+                elseif (($volume.ProtectionStatus -eq "Off") -and ($volume.VolumeStatus -eq "FullyEncrypted"))
+                {
+                    $obj.Status = "Encrypted but protection is off"
+                    $obj.Passed = 2
+                }
+                else
+                {
+                    $obj.Status = "Not protected"
+                    $obj.Passed = 2
+                }
+
+                $i++
+
+                Write-Output $obj
+            } 
+        }
+    }
+    catch 
+    { 
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+}
+
+function Test-MbamGpo
+{
+<#
+.SYNOPSIS 
+   Checks if all registry settings are matching the expected GPO specification
+.DESCRIPTION
+    Checks if all registry settings are matching the expected GPO specification. The specifications are listed in an xml file.
+.PARAMETER xmlFilePath
+    The path to the xml file with all GPO settings
+.NOTES
+    ID  FBP-MBAM-0018
+    Module ID   TC-MBAM-0027
+#> 
+[CmdletBinding()]
+Param(
+    # path to xml file with GPO settings
+    [Parameter(Mandatory=$true)]
+    [System.String]$xmlFilePath
+)
+
+    Try
+    {
+        [xml]$xml = Get-Content $xmlFilePath -ErrorAction Stop
+
+
+        foreach($policy in $xml.GPO.Policy)
+        {
+            if($policy.PolicyState -eq 'enabled')
+            {
+                $obj = [TapResult]::New("FBP-MBAM-0019.$($policy.PolicyID)", "TC-MBAM-0027.$($policy.PolicyID)", "GPO: $($policy.PolicyName)")
+
+                try 
+                {
+                    if (Get-MBAMGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop)
+                    {
+                        $obj.Status = "Policy correct and applied"
+                        $obj.Passed = 1
+                    }
+                    else
+                    {                   
+                        $obj.Status = "Policy value not correct"
+                        $obj.Passed = 3
+                    }
+                }
+                catch
+                {
+                    $obj.Status = "Policy not applied"
+                    $obj.Passed = 2
+                }            
+                
+                Write-Output $obj
+                $i++
+            }
+        }
+    }
+    catch 
+    {
+        #$obj = New-Object PSObject
+        #$obj | Add-Member NoteProperty Name("TC-MBAM-0027")
+        #$obj | Add-Member NoteProperty Task("GPOs are correct")
+        #$obj | Add-Member NoteProperty Status("Reference source gpo.xml or equivalent not found")
+        #$obj | Add-Member NoteProperty Passed("false")
+        Write-Output $obj
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }    
+}
+
+function Test-MbamClientSoftwareState
+{
+<#
+.SYNOPSIS 
+    Checks installation status of MDOP MBAM software.
+.DESCRIPTION
+    Checks installation status of MDOP MBAM software.
+.NOTES
+    ID  FBP-MBAM-0020
+    Module ID   TC-MBAM-0028
+#> 
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0020", "TC-MBAM-0028", "Status of MDOP MBAM software package")
+
+    try 
+    {
+        $MBAM = Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -eq "MDOP MBAM"      
+            
+        if (!($null -eq $MBAM))
+        {
+            $obj.Status = "Installed"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "MDOP MBAM Software not found"
+            $obj.Passed = 2
+        } 
+    }
+    catch
+    {
+        $obj.Status = "An error occurred, see logfile for more infos."
+        $obj.Passed = 4
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamClientAgentServiceState
+{
+<#
+.Synopsis 
+    Checks the MBAM client agent status 
+.DESCRIPTION
+    Checks the MBAM client agent status
+.NOTES
+    ID  FBP-MBAM-0021
+    Module ID   TC-MBAM-0029
+#>
+[CmdletBinding()]
+Param()
+ 
+    $obj = [TapResult]::New("FBP-MBAM-0021", "TC-MBAM-0029", "Status of BitLocker Management Client-Service")
+    
+    try 
+    {
+        $agent = Get-Service -Name MBAMAgent -ErrorAction Stop
+
+            
+        if($agent.Status -eq "Running")
+        {
+            $obj.Status = $agent.Status.ToString()
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = $agent.Status.ToString()
+            $obj.Passed = 2
+        } 
+    }
+    catch
+    {
+        $obj.Status = "Service not found"
+        $obj.Passed = 4
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamClientAgentVersion 
+{
+<#
+.Synopsis
+    Checks MBAM-Agent version of a client
+.DESCRIPTION
+    Checks the MBAM-Agent version of a client
+.PARAMETER version
+    The expected version of the MDOP MBAM package
+.NOTES
+    ID  FBP-MBAM-0022
+    Module ID   TC-MBAM-0030
+    
+    WinRM has to be activated on the remote machine to get a version number of a remote client
+#> 
+[CmdletBinding()]
+Param
+(
+    [Parameter(Mandatory=$true)]
+    [Alias('ClientAgentVersion')]
+    [string]$version  
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0022", "TC-MBAM-0030", "The MBAM-Agent version on client is up to date")
+
+    $currentVersion = Get-MBAMClientAgentVersion
+
+    if ($version -eq $currentVersion)
+    {
+        $obj.Status = "Version correct, installed version is $currentVersion"
+        $obj.Passed = 1
+    }
+    elseif($currentVersion -eq "0")
+    {
+        $obj.Status = "No client agent found."
+        $obj.Passed = 2  
+    }
+    else
+    {
+        $obj.Status = "Versions differ, installed version is $currentVersion"
+        $obj.Passed = 3 
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamClient2ServerKeyReporting
+{
+<#
+.Synopsis
+    Checks if the client escrowed the key to the MBAM server.
+.DESCRIPTION
+    Checks if the client escrowed the key to the MBAM server within the defined frequency.
+.NOTES
+    ID  FBP-MBAM-0023
+    Module ID   TC-MBAM-0031.1
+#> 
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0023", "TC-MBAM-0031.1", "Client escrowed key to MBAM server")
+
+    try 
+    {
+        Write-Verbose "[FBP-MBAM-0023]:Get time of last escrowed key"
+        $keyEscrowedTime = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM/operational";ID=29} -MaxEvents 1 -ErrorAction Stop | Select-Object -ExpandProperty TimeCreated
+    
+        Write-Verbose "[FBP-MBAM-0023]:Get key report frequency"
+        $reportFrequency = Get-Item 'HKLM:\SOFTWARE\Policies\Microsoft\FVE\MDOPBitLockerManagement' -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty "clientWakeupFrequency"
+
+        Write-Verbose "[FBP-MBAM-0023]:Get last system startup time"
+        $lastStartup = Get-SystemStartupTime
+        
+        $time = (Get-Date).AddMinutes(-$reportFrequency)
+
+        Write-Verbose "[FBP-MBAM-0023]:Check if time difference is valid"    
+        if ($lastStartup -gt $time)
+        {
+            if($keyEscrowedTime -gt $time)
+            {
+                $obj.Status = "Key escrowed at $keyEscrowedTime"
+                $obj.Passed = 1
+            }
+            else
+            {
+                $obj.Status = "Last system startup within report frequency, key not escrowed yet"
+                $obj.Passed = 3
+            }
+        }
+        else
+        {
+            if($keyEscrowedTime -gt $time)
+            {
+                $obj.Status = "Key escrowed at $keyEscrowedTime"
+                $obj.Passed = 1
+            }
+            else
+            {
+                $obj.Status = "No key escrowed within regular frequency"
+                $obj.Passed = 2
+            }
+        }
+    }
+    catch
+    {
+        $obj.Status = "An error occurred, see log file for more info."
+        $obj.Passed = 4
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamClient2ServerStatusReporting
+{
+<#
+.Synopsis
+    Checks if the client reported the status to the MBAM server.
+.DESCRIPTION
+    Checks if the client reported the status to the MBAM server within the defined frequency.
+.NOTES
+    ID  FBP-MBAM-0023
+    Module ID   TC-MBAM-0031.2
+#> 
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0023", "TC-MBAM-0031.2", "Client reported status to MBAM server")
+
+    try 
+    {
+        Write-Verbose "[FBP-MBAM-0023]:Get last report send time"
+        $statusReportingTime = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM/operational";ID=3} -MaxEvents 1 -ErrorAction Stop | Select-Object -ExpandProperty TimeCreated
+    
+        Write-Verbose "[FBP-MBAM-0023]:Get status report frequency"
+        $statusReportingFrequency = Get-item 'HKLM:\SOFTWARE\Policies\Microsoft\FVE\MDOPBitLockerManagement' -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty "StatusReportingFrequency"
+        
+        Write-Verbose "[FBP-MBAM-0023]:Get last system startup time"
+        $lastStartup = Get-SystemStartupTime
+        
+        $time = (Get-Date).AddMinutes(-$statusReportingFrequency)
+
+        Write-Verbose "[FBP-MBAM-0023]:Check if time difference is valid"    
+        if ($lastStartup -gt $time)
+        {
+            if($statusReportingTime -gt $time)
+            {
+                $obj.Status = "Status reported at $statusReportingTime"
+                $obj.Passed = 1
+            }
+            else
+            {
+                $obj.Status = "Last system startup within report frequency, status not reported yet"
+                $obj.Passed = 3
+            }
+        }
+        else
+        {
+            if($statusReportingTime -gt $time)
+            {
+                $obj.Status = "Status reported at $statusReportingTime"
+                $obj.Passed = 1
+            }
+            else
+            {
+                $obj.Status = "No status reported within regular frequency"
+                $obj.Passed = 2
+            }
+        }
+    }
+    catch
+    {
+        $obj.Status = "An error occurred, see log file for more info."
+        $obj.Passed = 4
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamTPMStatus
+{
+<#
+.Synopsis 
+    Checks the TPM status. 
+.DESCRIPTION
+    Checks if the TPM chip is present and activated.
+.NOTES
+    ID  FBP-MBAM-0024
+    Module ID   TC-MBAM-0036
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0024", "TC-MBAM-0036", "Status of TPM chip")
+
+    try
+    {
+        $tpm = Get-TpmObject
+
+        if ($tpm.IsActivated_InitialValue -and $tpm.IsEnabled_InitialValue)
+        {
+            $obj.Status = "TPM present and ready"
+            $obj.Passed = 1
+        }
+        elseif ($tpm.IsActivated_InitialValue -and !$tpm.IsEnabled_InitialValue)
+        {
+            $obj.Status = "TPM present but not ready"
+            $obj.Passed = 3
+        }
+        else
+        {
+            $obj.Status("TPM not present")
+            $obj.Passed = 2
+        }
+    }
+    catch
+    {
+        $obj.Status = "An error occurred, see logfile for more infos."
+        $obj.Passed = 4
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamTpmOwnerShip
+{
+<#
+.Synopsis
+    Checks the ownership of the TPM chip.
+.DESCRIPTION
+    Checks the ownership of the TPM chip.
+.NOTES
+    ID  FBP-MBAM-0025
+    Module ID   TC-MBAM-0037
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = [TapResult]::New("FBP-MBAM-0025", "TC-MBAM-0037", "TPM chip is owned by operating system")
+
+    $tpm = Get-TpmObject
+
+    if($null -ne $tpm)
+    {
+        if($Tpm.IsOwned().isOwned)
+        {
+            $obj.Status = "TPM is owned"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "TPM not owned"
+            $obj.Passed = 2
+        }
+    }
+    else
+    {
+        $obj.Status = "TPM not found"
+        $obj.Passed = 4
+        
+        # log error
+        $msg = "No TPM chip found."
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-MbamTpmVersion
+{
+<#
+.Synopsis
+    Checks the ownership of the TPM chip.
+.DESCRIPTION
+    Checks the ownership of the TPM chip.
+.PARAMETER version
+    Minimu version of TPM chip
+.NOTES
+    ID  FBP-MBAM-0026
+    Module ID   TC-MBAM-0041
+#>
+[CmdletBinding()]
+Param(
+    [single]$version = 1.2
+)
+
+    $obj = [TapResult]::New("FBP-MBAM-0026", "TC-MBAM-0041", "TPM chip version is at least $version")
+
+    $tpm = Get-TpmObject
+
+    if($null -ne $tpm)
+    {
+        $tpmversion = [single]$tpm.SpecVersion.Substring(0,$tpm.SpecVersion.IndexOf(','))
+        
+        if($tpmversion -ge $version)
+        {
+            $obj.Status = "TPM version is $tpmversion"
+            $obj.Passed = 1
+        }
+        else
+        {
+            $obj.Status = "TPM version is $tpmversion"
+            $obj.Passed = 2
+        }  
+    }
+    else
+    {
+        $obj.Status = "TPM not found"
+        $obj.Passed = 4
+
+        # log error
+        $msg = "No TPM chip found."
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    Write-Output $obj
+}
+
+function Test-BitlockerDriverVersion
+{
+<#
+.Synopsis 
+    Checks, if the BitLocker driver version is up to date.
+.DESCRIPTION
+    Checks, if the BitLocker driver version is up to date. At the moment this test only works for Windows 7 SP1 , 8.1 and 10.
+.NOTES
+    ID  FBP-MBAM-0027
+    Module ID   TC-MBAM-0049
+#>
+[CmdletBinding()]
+Param()
+
+    try
+    {       
+        $file = Get-Item C:\Windows\System32\drivers\fvevol.sys 
+        $fileVersion = -join($file.VersionInfo.ProductMajorPart,$file.VersionInfo.ProductMinorPart,$file.VersionInfo.ProductBuildPart,$file.VersionInfo.ProductPrivatePart)
+        $osVersion = Get-CimInstance Win32_OperatingSystem | Select-Object -ExpandProperty Version
+    }
+    catch
+    {
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    switch ($osVersion)
+    {
+        "6.1.7601" { $expectedFileVersion = "61760123003"; break } # Windows 7
+        "6.3.9600" { $expectedFileVersion = "63960017031"; break } 
+        "10.0.14393" { $expectedFileversion = "100143930"; break } # Windows 10 
+        "10.0.15063" { $expectedFileVersion = "10015063502"; break } # Windows 10 Creators Update 1703
+        "10.0.16299" { $expectedFileVersion = "1001629915"; break } # Windows 10 fall update 1709
+        "10.0.17134" { $expectedFileVersion = "100171341"; break } # Windows 10 spring update 1803
+        default { $expectedFileVersion = "0"; break }
+    }
+
+    # Create the test result object
+    $obj = [TapResult]::New("FBP-MBAM-0027", "TC-MBAM-0049", "The BitLocker driver version is correct.")
+
+
+    # Driver version matches
+    if ($expectedFileVersion -eq $fileVersion)
+    {
+        $obj.Status = "Driver is up to date."
+        $obj.Passed = 1
+    }
+
+    # Operating system not in the list
+    elseif ($expectedFileVersion -eq 0)
+    {
+        $obj.Status = "Operating system not in list." 
+        $obj.Passed = 2
+    } 
+
+    # A newer driver version is available
+    elseif ($expectedFileVersion -gt $fileVersion)
+    {
+        $obj.Status = "Driver version is older than expected."
+        $obj.Passed = 3
+    }
+
+    # A driver version with a higher version number is already installed 
+    elseif ($expectedFileVersion -lt $fileVersion)
+    {
+        $obj.Status = "Driver version is higher than expected."
+        $obj.Passed = 3
+    }
+
+    Write-Output $obj
+}
+
+function Test-TPMFirmwareVul 
+{
+<#
+.Synopsis 
+    Checks, if the TPM is vulnerable for security advisory ADV170012
+.DESCRIPTION
+    Checks, if the TPM is vulnerable for security advisory ADV170012. See https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/ADV170012 for 
+    further information.
+.LINK https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/ADV170012
+.NOTES
+    ID  FBP-MBAM-0028
+    Module ID   TC-MBAM-0050
+#>
+
+#TODO: testen, ob entsprechendes Update installiert ist
+[CmdletBinding()]
+Param()
+
+    try
+    {
+        # Get first event which indicates vulnerability
+        $vulEvent = Get-EventLog -LogName System | Where-Object {($_.eventID -eq 1794) -and ($_.Source -eq "TPM-WMI")} | Select-Object -First 1  -ErrorAction Stop  
+    }
+    catch
+    {
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+
+    # Create the test result object
+    $obj = [TapResult]::New("FBP-MBAM-0028", "TC-MBAM-0050", "ADV170012 | Vulnerability in TPM could allow Security Feature Bypass.")
+
+    # No event found
+    if ($null -eq $vulEvent)
+    {
+        $obj.Status = "TPM not vulnerable"
+        $obj.Passed = 1
+    }
+    # Event found, we have to check if it is an old entry or if it was logged after the last system boot up time
+    else
+    {
+        $lastboot = Get-CimInstance -ClassName win32_operatingsystem | Select-Object lastbootuptime
+
+        if ($lastboot.lastbootuptime -lt $vulEvent.TimeGenerated)
+        {
+            $obj.Status = "TPM vulnerable, found event 1794"
+            $obj.Passed = 2
+        }
+        else
+        {
+            $obj.Status = "TPM not vulnerable"
+            $obj.Passed = 1
+        }
+    }
+
+    Write-Output $obj
+}
+
+#endregion
+
+#endregion
+
+
+#region 2 Helper functions
+# ------------------
+#
+# Section for all helper functions 
+#
+###############################################################
+
+
+
+#region 2.1 Client specific helpers
+# ---------------------------
+#
+# Section for helper functions targeting a client computer
+#=========================================================
+
+function Get-MbamStatusReportFrequency
+{
+[CmdletBinding()]
+Param()
+
+    try
+    {
+       Write-Output (Get-Item "HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement" -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty StatusReportingFrequency)
+    }
+    catch
+    {
+        throw "Policy not found"
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error     
+    }  
+}
+
+function Get-MbamKeyReportFrequency
+{
+[CmdletBinding()]
+Param()
+
+    try
+    {
+       Write-Output (Get-Item "HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement" -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty ClientWakeupFrequency)
+    }
+    catch
+    {
+        throw "Policy not found"
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error     
+    } 
+}
+
+function Get-MbamStatusWebServiceUrl
+{
+[CmdletBinding()]
+Param()
+
+    try
+    {
+       Write-Output (Get-Item "HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement" -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty StatusReportingServiceEndpoint)
+    }
+    catch
+    {
+        throw "Policy not found"
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error     
+    } 
+}
+
+function Get-MbamKeyWebServiceUrl
+{
+[CmdletBinding()]
+Param()
+
+    try
+    {
+       Write-Output (Get-Item "HKLM:\Software\Policies\Microsoft\FVE\MDOPBitLockerManagement" -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty KeyRecoveryServiceEndPoint)
+    }
+    catch
+    {
+        throw "Policy not found"
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        Write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error     
+    } 
+}
+
+function Get-MbamClientAgentVersion 
+{
+<#
+.Synopsis
+   Gets the MBAM-Agent version of a client.
+.DESCRIPTION
+   Gets the MBAM-Agent version of a client.
+.NOTES
+   WinRM has to be activated on the remote machine to Get a version number of a remote client
+#>
+[CmdletBinding()]
+Param()
+
+    try
+    {
+        Get-Item 'HKLM:SOFTWARE\Microsoft\MBAM' -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty "AgentVersion"
+    }
+    catch
+    {
+        Write-Output "0"
+
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+}
+
+function Get-MbamOSDiskProtectionStatus
+{  
+<#
+.Synopsis
+   Gets the protection status of the operating system hard disk drive
+.DESCRIPTION
+   Gets the protection status of the operating system hard disk drive.
+#>  
+[CmdletBinding()]
+Param()
+
+    try 
+    {
+        if (Get-Module BitLocker)
+        {
+            Get-BitLockerVolume -MountPoint "$env:SystemDrive" | Select-Object -ExpandProperty ProtectionStatus -ErrorAction Stop
+        }
+        else
+        {
+            # log error
+            $msg = "Module BitLocker not found"
+            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
+        }    
+    }
+    catch
+    {
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }   
+}
+
+function Get-MbamDiskProtectionStatus
+{
+<#
+.Synopsis 
+    Get the protection status of given hard disk drives
+.DESCRIPTION
+    Gets the protection status of given hard disk drives. 
+.PARAMETER mountPoints
+    An array of drives
+.OUTPUTS
+    One protection status per given mounting point entry
+.EXAMPLE
+    Get-DiskProtectionStatus ("C:","D:")
+#>    
+[CmdletBinding()]
+[Parameter(Mandatory=$true)]
+Param(
+        [string[]]$mountPoints
+    )
+
+
+    try 
+    {
+        if (Get-Module BitLocker)
+        {
+            Get-BitLockerVolume -MountPoint $mountPoints | Select-Object -ExpandProperty ProtectionStatus -ErrorAction Stop
+        }
+        else
+        {
+            # log error
+            $msg = "Module BitLocker not found"
+            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
+        }
+    }
+    catch
+    {
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+}
+
+function Get-MbamGpoRuleState
+{
+[CmdletBinding()]
+Param(
+        [Parameter(Mandatory=$true)]
+        [string]$PolicyKey,
+
+        [Parameter(Mandatory=$true)]
+        [string]$PolicyValue,
+
+        [Parameter(Mandatory=$true)]
+        [string]$path
+    )
+
+    try
+    {
+        $result = Get-Item $path -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty $PolicyKey
+
+        if ($null -eq $result)
+        {
+            throw "Policy not found"
             # log error
             $msg = $_.Exception.toString()
             $msg += "; " + $_.ScriptStackTrace.toString()
             write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
         }
 
-    Write-Output $obj
-}
-
-function Get-LastSoftwareUpdateTimes
-{
-<#
-.Synopsis
-   Gets the times of the last software updates including update titles and descriptions
-.DESCRIPTION
-   Gets the times of the last software updates including update titles and descriptions which are installed via MSI. By default 
-   it checks the last 5 system updates and returns these if they have a status of Succeeded or SucceededWithErrors.
-   This can be changed to a value between 1 to 30 entries.
-.OUTPUTS
-    PSObject with Properties
-    [DateTime] InstalledOn - Installation date
-    [String] Title - Short sescription of update
-    [string] Description - Long description of update
-    [int32] Status - status of update: 2 = succeeded; 3 = succeeded with errors
-#>
-    [CmdletBinding()]
-    Param(
-        [int]$count = 5
-    )
-
-    if ($count -le 0 -OR $count -gt 30)
-    {
-            $count = 5
+        if ($result -eq $PolicyValue)
+        {
+            return $true
         }
-
-    $Session = New-Object -ComObject Microsoft.Update.Session            
-    $Searcher = $Session.CreateUpdateSearcher() 
-        
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa386532%28v=vs.85%29.aspx
-    # get the last five update entrys in case one is not succeded            
-    $Searcher.QueryHistory(0,5) | ForEach-Object {
-            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa387095%28v=vs.85%29.aspx  
-            if ($_.ResultCode -eq 2 -OR $_.ResultCode -eq 3)
-            {
-                if($_.Title -match "\(KB\d{6,7}\)"){            
-                    # Split returns an array of strings            
-                    $Title = ($_.Title -split '.*(KB\d{6,7})\)')            
-                }else{            
-                    $Title = $_.Title            
-                }      
-                return New-Object -TypeName PSObject -Property @{            
-                    InstalledOn = Get-Date -Date $_.Date;            
-                    Title = $Title;            
-                    Description = $_.Description;            
-                    Status = $_.ResultCode            
-                }
-            }
-        } 
+        else 
+        {
+            return $false
+        }
+    }
+    catch
+    {
+        throw "Policy not found"
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error     
+    }
 }
 
 function Get-TpmObject
 {
+[CmdletBinding()]
+Param()
 
-    Get-wmiobject -Namespace ROOT\CIMV2\Security\MicrosoftTpm -Class Win32_Tpm
+    Get-CimInstance -Namespace ROOT\CIMV2\Security\MicrosoftTpm -Class Win32_Tpm
 
 }
 
-function Test-UserRights
+#endregion
+
+#region 2.2 Server specific helpers
+# ---------------------
+#
+# Section for helper functions targeting the backend
+#===================================================
+
+function Test-MbamWCFServiceState
 {
+<#
+.Synopsis
+    Tests the state of a WCF-service for MBAM.
+.DESCRIPTION
+    Tests the state of a Windows Communication Foundation service for MBAM. The following service types are possible
+    admin:  for the administration service
+    user:   for the user support service (deprecated)
+    report: for the status report service
+    core:   for the core service   
+.PARAMETER serviceType
+    Type of web service to test. Possible values are:
+    admin  - for AdministrationService
+    user   - for UserSupportService (deprecated)
+    report - for StatusReportingService
+    core   - for CoreService (RecoveryAndHardware)
+.PARAMETER uri
+.PARAMETER id
+    An
+.PARAMETER moduleId
+    An optional ID referencing the calling module
+.EXAMPLE
+    Test-MBAMWCFServiceState -type admin -credentials domain\username
+#>
+[cmdletBinding()]
+Param(
+    # service type, accepted values are admin, user, report or core
+    [Parameter(Mandatory=$true)]
+    [ValidateSet('admin','user','report','core')]
+    [String]$serviceType,
+
+    [Parameter(Mandatory=$true)]
+    [String]$uri,
+
+    [Parameter(Mandatory=$true)]
+    [String]$id,
+
+    [String]$moduleId
+)
+    if($moduleId -eq "") {$moduleId = "N/A"}
+    $obj = [TapResult]::New($id, $moduleId,"")
+
+    Switch ($serviceType)
+    {
+        'admin' {
+            $service = "MBAMAdministrationService/AdministrationService.svc"
+            $obj.Task = "Webservice AdministrationService.svc running"}
+        'user' {
+            $service = "MBAMUserSupportService/UserSupportService.svc"
+            $obj.Task = "Webservice UserSupportService.svc running"}
+        'report' {
+            $service = "MBAMComplianceStatusService/StatusReportingService.svc"
+            $obj.Task = "Webservice StatusReportingService.svc running"}
+        'core' {
+            $service = "MBAMRecoveryAndHardwareService/CoreService.svc"
+            $obj.Task = "Webservice CoreService(RecoveryAndHardware) running"}
+        Default {$service = $null} #
+    }
+
+    Try
+    {
+        # we excpected this request to fail with a 401 because we do not pass any credentials
+        Invoke-WebRequest -URI "$uri/$service" -ErrorAction Stop
+
+        # We should not get to this point, otherwise the service is open to the world without checking credentials
+        $obj.Status = "Missing login"
+        $obj.Passed = 4
+    }
+    Catch 
+    {
+        # therefore a 401.2 exception should be raised
+        if ($_.Exception -like "*(401) Unauthorized*")
+        {
+            $obj.Status = "Running"
+            $obj.Passed = 1
+        }  
+        else
+        {
+            $obj.Status = "Not running"
+            $obj.Passed = 2
+
+            Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+        } 
+    }
+
+    Write-Output $obj    
+}
+
+function Get-MBAMHostname
+{
+<#
+.Synopsis
+    Gets the MBAM hostname.
+.DESCRIPTION
+    Gets the MBAM hostname from MBAM webadminstration (Get-MbamWebApplication -AdministrationPortal)
+#>
+[CmdletBinding()]
+Param()
+
+    try 
+    {
+        if(Get-Module Microsoft.MBAM)
+        {
+            Get-MBAMWebApplication -AdministrationPortal | Select-Object -ExpandProperty HostName -ErrorAction Stop
+        }
+        else
+        {
+            # log error
+            $msg = "Module Microsoft.MBAM not found"
+            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
+        } 
+    }
+    catch
+    {
+        Write-Output ""
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+    }
+}
+
+function Get-MBAMServerVersion25 
+{
+<#
+.Synopsis
+   Gets MBAM-Server version.
+.DESCRIPTION
+   Gets version number of the installed MBAM server software package.
+#>  
+[CmdletBinding()]
+Param()
+ 
+    try 
+    {
+        Get-Item 'HKLM:\SOFTWARE\Microsoft\MBAM Server' -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty "Installed"
+    }
+    catch 
+    {
+       Write-Error("No MBAM-Server 2.5 SP1 installed.")
+       Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+}
+
+#endregion
+
+#region 2.3 General helpers
+# -------------------
+#
+# Section for general functions
+#==============================
+
+function Test-CurrentUserAdmin
+{
+<#
+.Synopsis
+   Checks, if current user has the role administrator.
+.DESCRIPTION
+    Checks, if current user has the role administrator.
+#>
     $objIdentitaet = [System.Security.Principal.WindowsIdentity]::GetCurrent()
     $objPrincipal = New-Object System.Security.Principal.WindowsPrincipal($objIdentitaet)
  
     if(-not $objPrincipal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) 
     {
-            Write-Error "Missing rights - admin rights necessary!"
+            Write-Error "Current user is not an administrator"
             return $false
         }
     else
     {
-            return $true
-        }
+        return $true
+    }
 }
+
+#endregion
+
+#endregion
+
+
+#region 3 Report functions
+# ------------------
+#
+# Section for all functions to create a report (format test 
+# results, add special info section etc.
+#
+###############################################################
+
+
+
+#region 3.1 Client specific report functions
+# ------------------------------------
+#
+# Section for report functions targeting a client computer
+#=========================================================
+
+function Get-MbamClientEventLogEntry
+{
+<#
+.SYNOPSIS
+    Gets the last event log entries from the MBAM client event log.
+.DESCRIPTION
+    Gets the last event log entries from the MBAM client event log. By default it gets the last 10 log entry from admin and operational log
+.PARAMETER quantity
+    Count of last log entries fetched from MBMA client admin and operational log
+#>
+[CmdletBinding()]
+Param(
+    [int]$quantity = 10
+)
+
+    $result = ""
+
+    # get MBAM admin log entries
+    try
+    {
+        $mbamAdmin = Get-WinEvent -FilterHashtable @{logname="Microsoft-Windows-MBAM/Admin"} -MaxEvents $quantity -ErrorAction Stop
+        
+        # list all admin log entries
+        $result = "<p><strong>Admin log</strong></p>"
+        $result += "<table><tr><td>Time</td><td>ID</td><td>Level</td><td>Message</td></tr>"
+
+        foreach($entry in $mbamAdmin)
+        {
+            $result += "<tr><td>$($entry.TimeCreated)</td><td>$($entry.ID)</td><td>$($entry.LevelDisplayName)</td><td>$($entry.Message)</td></tr>"  
+        }
+
+        $result += "</table>"
+    } 
+    catch
+    {
+        $result += "<p><em>There is not an event log on the localhost computer that matches Microsoft-Windows-MBAM/Admin or the log is empty</em></p>"
+    }
+
+    # get MBAM operational log entries
+    try
+    {
+        $mbamOperational = Get-WinEvent -FilterHashtable @{logname="Microsoft-Windows-MBAM/Operational"} -MaxEvents $quantity -ErrorAction Stop
+    
+        # list all operational log entries
+        $result += "<p><strong>Operational log</strong></p>"
+        $result += "<table><tr><td>Time</td><td>ID</td><td>Level</td><td>Message</td></tr>"
+
+        foreach($entry in $mbamOperational)
+        {
+            $result += "<tr><td>$($entry.TimeCreated)</td><td>$($entry.ID)</td><td>$($entry.LevelDisplayName)</td><td>$($entry.Message)</td></tr>"  
+        }
+
+        $result += "</table>"
+    }
+    catch
+    {
+        $result += "<p><em>There is not an event log on the localhost computer that matches Microsoft-Windows-MBAM/Operational or the log is empty</em></p>"
+    }
+
+
+    Write-Output $result
+}
+
+function Get-MbamClientConfiguration
+{
+<#
+.SYNOPSIS
+    Collects some configurations of the MBAM client agent.
+.DESCRIPTION
+    Collects some configurations of the MBAM client agent like report frequency or web service urls
+.EXAMPLE
+    PS C:\> Get-MbamClientConfiguration | fl
+
+    Status Report Frequency         : 1
+    Key Report Frequency            : 5
+    Status Reporting Webservice Url : http://192.168.178.85:80/MBAMComplianceStatusService/StatusReportingService.svc
+    Key Reporting Webservice Url    : http://192.168.178.85:80/MBAMRecoveryAndHardwareService/CoreService.svc
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = New-Object PSCustomObject
+
+    # Collect configuration and put it into the object
+    $obj | Add-Member -MemberType NoteProperty -Name 'Status Report Frequency' -Value (Get-MbamStatusReportFrequency)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Key Report Frequency' -Value (Get-MbamKeyReportFrequency)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Status Reporting Webservice Url' -Value (Get-MbamStatusWebServiceUrl)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Key Reporting Webservice Url' -Value (Get-MbamKeyWebServiceUrl)
+
+    Write-Output $obj
+}
+
+#endregion
+
+
+#region 3.2 Server specific report functions
+# ------------------------------------
+#
+# Section for report functions targeting the backend
+#===================================================
 
 function Send-MbamEmailOnError
 {
@@ -271,14 +3055,19 @@ function Send-MbamEmailOnError
     {
         $send = $false
 
-        if ($obj.passed -eq "false")
+        if ($obj.passed -eq 2)
         {
-            $subject = "[ERROR] MBAM server report"
+            $subject = "[FAILED] MBAM server report"
             $send = $true
         }
-        if ($obj.passed -eq "warning")
+        elseif ($obj.passed -eq 3)
         {
             $subject = "[WARNING] MBAM server report"
+            $send = $true
+        }
+                elseif ($obj.passed -eq 3)
+        {
+            $subject = "[ERROR] MBAM server report"
             $send = $true
         }
 
@@ -300,515 +3089,16 @@ function Send-MbamEmailOnError
 
 function Send-MbamEmailReport
 {
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [string]$body,
 
-        [string] $subject = "MBAM server status report"
-    )
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$body,
+
+    [string] $subject = "MBAM server status report"
+)
 
     Send-MailMessage -to $ConfigFile.Settings.Email.MailTo -from $ConfigFile.Settings.Email.MailFrom -Subject $subject -body $body -BodyAsHtml -SmtpServer $ConfigFile.Settings.Email.SMTPServer
-}
-
-function Get-LocalAdmins
-{
-<#
-.Synopsis
-   Gets all users in local group "Administrators".
-.DESCRIPTION
-   Gets all users in local group "Administrators". Local groups inside are not recursively resolved into their users. Groupnames will be placed in result as if they were users.
-   Active Directory groups on the other hand are recursively resolved for other their users and maybe other groups inside.  
-.OUTPUTS
-    SamAccountNames of users
-#>
-
-    $Computer = $env:COMPUTERNAME
-
-    $ADSIComputer = [ADSI]("WinNT://$Computer,computer")
-
-    try 
-    {
-        $group = $ADSIComputer.psbase.children.find('Administrators', 'Group')
-    }
-    catch
-    {
-        try 
-        {
-            $group = $ADSIComputer.psbase.children.find('Administratoren', 'Group')
-        }
-        catch
-        {
-        }
-    }
-
-    $members = $group.psbase.invoke("members")  | ForEach {
-        $_.GetType().InvokeMember("Name",  'GetProperty',  $null,  $_, $null)
-    }
-    $admins = @()
-
-    if(Get-Module ActiveDirectory)
-    {
-        foreach($member in $members)
-        {  
-            try {      
-                # Try if $member is a AD group and get all members of this group including all nested groups      
-                $admins += (Get-ADGroupMember $member -Recursive | select -ExpandProperty SamAccountName)
-            }
-            catch
-            {
-                # TODO catch unterscheiden nach nicht gefunden oder active directory Fehler
-                # If it is not a AD group, it has to be a local account, so add it (we assume local groups are not used inside the company)
-                $admins += $member
-            }
-        }
-    }
-    # Remove duplicated accounts und output the unique ones
-    Write-Output $admins | select -Unique
-}
-
-function Get-LastInstalledUpdateGroup
-{
-
-    $InstalledUpdates = Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-WindowsUpdateClient';Id=19} | Select-Object -Property *,@{Name='UpdateName';Expression={$_.Properties[0].Value}} | Select-Object TimeCreated, UpdateName
-    $date = $InstalledUpdates.TimeCreated | Select-Object -First 1
-
-    $LastInstalledUpdates = @()
-
-    foreach($update in $InstalledUpdates)
-    {
-        if ($update.TimeCreated.Date -eq $date.Date)
-        {
-            $LastInstalledUpdates += $update
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    Write-Output $LastInstalledUpdates
-}
-
-function Get-LastInstalledSccmUpdateGroup
-{
-    try
-    {
-        $AssignedUpdateCIs = Get-CimInstance -Namespace root\ccm\Policy\Machine -ClassName CCM_UpdateCIAssignment -ErrorAction Stop | Select-Object -ExpandProperty AssignedCIs | ForEach-Object { ([XML]$_).CI } | Select-Object -Property @{Name='UpdateId';Expression={$_.ID}},DisplayName 
-        $InstalledUpdates = Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-WindowsUpdateClient';Id=19} | Select-Object -Property *,@{Name='UpdateName';Expression={$_.Properties[0].Value}},@{Name='UpdateId';Expression={$_.Properties[1].Value}}
-        
-        $UpdatesAssignedAndInstalled = Compare-Object -ReferenceObject $AssignedUpdateCIs -DifferenceObject $InstalledUpdates -Property UpdateId -IncludeEqual | Where-Object { $_.SideIndicator -eq '==' } | Select-Object -ExpandProperty UpdateId
-        $InstalledUpdates = $InstalledUpdates | Where-Object { $UpdatesAssignedAndInstalled -contains $_.UpdateId } | Select-Object -Property TimeCreated,UpdateName
-
-        $date = $InstalledUpdates.TimeCreated | Select-Object -First 1
-
-        $LastInstalledUpdates = @()
-
-        foreach($update in $InstalledUpdates)
-        {
-        if ($update.TimeCreated.Date -eq $date.Date)
-        {
-            $LastInstalledUpdates += $update
-        }
-        else
-        {
-            break;
-        }
-    }
-
-        Write-Output $LastInstalledUpdates
-    }
-    catch
-    {      
-        write-LogFile -Path $LogPath -name $LogName -message "CCM class not found. SCCM client not installed?" -Level Error
-        Throw "SCCM client not installed"
-    }
-}
-
-function Get-FormattedUpdateInformation
-{
-    $updates = Get-LastInstalledUpdateGroup
-    
-    if ($updates -eq $null)
-    {
-        Write-Output "No updates found"
-    }
-    else
-    {
-        Write-Output $updates[0].TimeCreated
-        Write-Output "<ul>"
-
-        foreach($update in $updates)
-        {
-            Write-Output "<li>"$update.UpdateName"</li>"
-        }
-        Write-Output "</ul>"
-    }
-}
-
-function Get-FormattedSccmUpdateInformation
-{
-    try
-    {
-        $updates = Get-LastInstalledSccmUpdateGroup -ErrorAction Stop
-    
-    
-        if ($updates -eq $null)
-        {
-            Write-Output "No updates found"
-        }
-        else
-        {
-            Write-Output $updates[0].TimeCreated"<br/><br/>"
-            Write-Output "<ul>"
-
-            foreach($update in $updates)
-                    {
-            Write-Output "<li>"$update.UpdateName"</li>"
-        }
-            Write-Output "</ul>"
-        }
-    }
-    catch
-    {
-        Write-Output "SCCM client not installed"
-    }
-}
-
-function Get-UpdateHistory 
-{
-    [CmdletBinding()]
-    Param(
-        [int]$number = 20
-    )
-
-    Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-WindowsUpdateClient';Id=19} | Select-Object -Property *,@{Name='UpdateName';Expression={$_.Properties[0].Value}} | Select-Object TimeCreated, UpdateName -First $number
-}
-
-function Get-SccmDeploymentHistory
-{
-    [CmdletBinding()]
-    Param(
-        [int]$number = 20
-    )
-
-    try
-    {
-        Get-CimInstance -Namespace root\ccm\Policy\Machine -ClassName CCM_UpdateCIAssignment -ErrorAction Stop `
-        | Select-Object -Property AssignmentName,EnforcementDeadline,StartTime -First $number `
-        | Sort-Object -Property EnforcementDeadline -Descending `   
-    }
-    catch
-    {
-        # log error 
-        write-LogFile -Path $LogPath -name $LogName -message "CCM_UpdateCIAssignment class not found" -Level Error
-    }
-}
-
-function Test-SystemRestartMayBeNescessary
-{
-    [Cmdletbinding()]
-    Param(
-        [int]$withinDays = 7
-    )
-
-    # If we have a pending reboot, system definitely has to restart
-    if (Get-PendingReboot)
-    { Write-Output "yes" }
-
-    # Otherwise check, if there are updates to install within the next $withDays
-    else
-    {
-        try
-        {
-            $date = (Get-Date).AddDays($withinDays)
-        
-            Get-CimInstance -Namespace 'root\ccm\ClientSDK' -ClassName 'CCM_SoftwareUpdate' -ErrorAction Stop `
-            | select -ExpandProperty Deadline `            | ForEach-Object { if ($_.Deadline -le $date) { Write-Output "yes" } else { Write-Output "no" } }
-
-        }
-        catch
-        {
-            Write-Output "SCCM client not installed"
-            # log error
-            write-LogFile -Path $LogPath -name $LogName -message "CCm class not found. SCCM client not installed?" -Level Error
-        }
-    }
-}
-
-function Get-MaintenanceMode
-{
-<#
-.Synopsis
-    Gets maintenance status of host (needs MMTool to be available).
-.DESCRIPTION
-    Gets maintenance status of host. It checks for logfile of MMTool and parses the info inside to decide, if maintenance mode is on ($true)
-    or off ($false).
-    If file is not found because maybe MMTool is not installed, it also returns $false. 
-.OUTPUTS
-    $true if maintenance mode is on, $false otherwise 
-#> 
-
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [string]$pathToLog
-    )
-
-    try
-    {
-        $maintenanceOn = $false
-        
-        # Get content of MMTool logfile
-        $file = Get-Content $pathToLog
-
-        # Get last line number 
-        $lastLine = $file.Count-1
-        # Get actual date and time
-        $now = Get-Date
-
-        # Check if last entry in file is an info about end time of maintenance mode or if maintenance mode is still on till xx:xx:xx
-        if (($file[$lastLine] -like "*Maintenance -> End*") -or ($file[$lastLine] -like "*Maintenance Mode bis*"))
-        {
-            # Get date and time from the string
-            $date = Get-Date($file[$lastLine].Substring($file[$lastLine].Length-19, 19))     
-        }
-        
-        # Check if last entry in file is a entry about a manually ended maintenance mode
-        elseif ($file[$lastLine] -like "*Maintenance*ausgeschaltet*") 
-        { 
-            # Get date and time from the string
-            $date = Get-Date($file[$lastLine-1].Substring($file[$lastLine-1].Length-19, 19))
-        }
-
-        if ($date)
-        {
-            # Check if we are still in maintenance mode or not
-            if ($date -gt $now) { $maintenanceOn = $true }
-        }
-
-        return $maintenanceOn
-    }
-    catch
-    {
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-
-        return $false
-    }
-}
-
-function Get-PendingReboot
-{
-<#
-.Synopsis
-    Checks if there is a reboot pending
-.DESCRIPTION
-    This function looks for a registry branch wiht the ending RebootPending. If it does not exists, then no reboot is necessary.   
-.OUTPUTS
-    $true if reboot is pending, $false otherwise 
-#> 
-
-    $reboot = $false
-
-    try 
-    {
-        if (Get-item 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending' -ErrorAction Stop)
-        {
-            $reboot = $true
-        }
-    }
-    catch 
-    {
-        # We do not log anything at this point because in case of an error there is just no reboot pending
-    }
-
-    return $reboot
-}
-
-function Get-UserLoginHistory
-{
-<#
-.Synopsis
-    Gets user login history on machine.
-.DESCRIPTION
-    Gets user login history on machine within last 7 days by default.  
-    
-    Logon Types
-    ===========
-    2  = Logon Typ 2  - Interactive
-    3  = Logon Typ 3  - Network
-    4  = Logon Typ 4  - Batch
-    5  = Logon Typ 5  - Service
-    7  = Logon Typ 7  - Unlock
-    8  = Logon Typ 8  - NetworkCleartext
-    9  = Logon Typ 9  - New Credentials
-    10 = Logon Typ 10 - RemoteInteractive
-    11 = Logon Typ 11 - CachedInteractive
-
-.PARAMETERS
-    $date The date of from which logins are returned    
-.OUTPUTS
-    
-#>
-
-    [CmdletBinding()]
-    Param(
-        [DateTime]$startDate = (Get-Date).AddDays(-7)
-    )
-
-    
-    $log = Get-Eventlog -LogName Security -after $startDate
-
-    #$log | where {$_.EventID -eq 4624} | where {($_.ReplacementStrings[8] -eq 2) -or ($_.ReplacementStrings[8] -eq 10)} | select {$_.ReplacementStrings[5], $_.ReplacementStrings[18]}
-
-    #$log | where {$_.EventID -eq 4624} | where {($_.ReplacementStrings[8] -eq 2) -or ($_.ReplacementStrings[8] -eq 10)} | Select-Object -unique  -ExpandProperty ReplacementStrings | select -Index 5,16
-    #$log | where {$_.EventID -eq 4624} | where {($_.ReplacementStrings[8] -eq 2) -or ($_.ReplacementStrings[8] -eq 10)}  | foreach {write-ouput $_.TimeGenerated $_.ReplacementStrings[5]} 
-    $log | where {$_.EventID -eq 4624} | where {($_.ReplacementStrings[8] -eq 2) -or ($_.ReplacementStrings[8] -eq 10)}  | foreach {
-        $obj = New-Object PSObject 
-        $obj | Add-Member NoteProperty LogonTime($_.TimeGenerated)
-        $obj | Add-Member NoteProperty User($_.ReplacementStrings[5])
-        if ($_.ReplacementStrings[8] -eq 2)
-        {
-            $obj | Add-Member NoteProperty LogonTyp("Interactive")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty LogonTyp("RemoteInteractive")
-            $obj | Add-Member NoteProperty IP-Adresse($_.ReplacementStrings[18])
-            }
-        
-       Write-Output $obj
-    } | where {$_.User -notlike "DWM-*"}
-
-}
-
-
-# Report Functions
-# ----------------
-<#
-    Some functions used for reporting, building reports or convert results to html tables.
-#>
-
-function ConvertTo-HtmlTable 
-{
-<#
-.Synopsis
-    Converts one or many MBAM Testresult-Objects to a html table 
-.DESCRIPTION
-    Converts one or many MBAM Testresult-Objects to a html table with one result per row. 
-    Newlines are converted into <br> (only in status column!)
-#>
-    Param(  
-        [Parameter(
-            Position=0, 
-            Mandatory=$true, 
-            ValueFromPipeline=$true,
-            ValueFromPipelineByPropertyName=$true)
-        ]
-        [Alias('Testresult')]
-        [PSCustomObject[]]$TestResultObject
-    ) 
-
-    Begin 
-    {
-        Write-Output "<div style=`"overflow-x:auto;`"><table class=`"result-table`"><tr><th>Name</th><th>Task</th><th>Status</th><th>Result</th></tr>"
-        $nl = [System.Environment]::NewLine
-    }
-    
-    Process 
-    {   
-        # Replace system new line with html br
-        $status = ($TestResultObject.status).Replace($nl, "<br>")
-
-        if ($TestResultObject.passed -eq "true")
-        {
-            Write-Output "<tr><td>"$TestResultObject.name"</td><td>"$TestResultObject.task"</td><td>$status</td><td><span class=`"passed`">OK</span></td></tr>"
-        }
-        elseif ($TestResultObject.passed -eq "false")
-        {
-            Write-Output "<tr><td>"$TestResultObject.name"</td><td>"$TestResultObject.task"</td><td>$status</td><td><span  class=`"failed`">!</span></td></tr>" 
-        }
-        elseif ($TestResultObject.passed -eq "warning")
-        {
-            Write-Output "<tr><td>"$TestResultObject.name"</td><td>"$TestResultObject.task"</td><td>$status</td><td><span  class=`"warning`">!</span></td></tr>" 
-        }
-    }
-    End 
-    {
-        Write-Output "</table></div>"      
-    }
-}
-
-function New-MbamReportSectionHeader
-{
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        $resultObjects,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$headertext,
-
-        [string]$anchor
-    )
-
-    $header = "<h3 id=`"$anchor`" class=`"passed`">$headertext</h3>"
-    $errCounter, $warnCounter = 0, 0
-
-    foreach($obj in $resultObjects)
-    {
-        if ($obj.passed -eq "false") { $errCounter++ }
-        if ($obj.passed -eq "warning") { $warnCounter++ }
-    } 
-    
-    if ($errCounter -gt 0) 
-    { 
-        $header = "<h3 id=`"$anchor`" class=`"failed`">$headertext (Errors: $errCounter)</h3>" 
-    }
-    elseif ($warnCounter -gt 0)
-    {
-        $header = "<h3 id=`"$anchor`" class=`"warning`">$headertext (Warnings: $warnCounter)</h3>"
-    }
-    
-    Write-Output $header   
-}
-
-function New-MbamReportNavPoint
-{
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        $resultObjects,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$navPointText,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$anchor 
-    )
-
-    $navPoint = "<li><a href=`"#$anchor`">$navPointText <span  class=`"green`">OK</span></a></li>"
-    $errCounter, $warnCounter = 0, 0
-
-    foreach($obj in $resultObjects)
-    {
-        if ($obj.passed -eq "false") { $errCounter++ }
-        if ($obj.passed -eq "warning") { $warnCounter++ }
-    } 
-    
-    if ($errCounter -gt 0) 
-    { 
-        $navPoint = "<li><a href=`"#$anchor`">$navPointText <span class=`"red`">$errCounter</span></a></li>" 
-    }
-    elseif ($warnCounter -gt 0)
-    {
-        $navPoint = "<li><a href=`"#$anchor`">$navPointText <span class=`"orange`">$warnCounter</span></a></li>"
-    }
-    
-    Write-Output $navPoint  
 }
 
 function Send-MbamErrorMessage
@@ -821,26 +3111,26 @@ function Send-MbamErrorMessage
    Emailsettings are read from the settings.psd1 file in the module directory. The frequency to send an email can be overwritten using the $frequency parameter. If 
    $frequency is <= zero, the standard value is taken.  
 #>
-    [CmdletBinding()]
-    Param(
-        # Recipient/s of mail
-        [Parameter(Mandatory=$true)]
-        [string[]]$To,
+[CmdletBinding()]
+Param(
+    # Recipient/s of mail
+    [Parameter(Mandatory=$true)]
+    [string[]]$To,
 
-        # Subject of mail
-        [Parameter(Mandatory=$true)]
-        [string]$Subject,
+    # Subject of mail
+    [Parameter(Mandatory=$true)]
+    [string]$Subject,
 
-        # Filename to store temporary data
-        [Parameter(Mandatory=$true)]
-        [string]$tmpFile,
+    # Filename to store temporary data
+    [Parameter(Mandatory=$true)]
+    [string]$tmpFile,
 
-        # Message about the error
-        [string]$Body, 
+    # Message about the error
+    [string]$Body, 
 
-        # Time in minutes in which a continuously occurring error is reported once
-        [int]$Frequency
-    )
+    # Time in minutes in which a continuously occurring error is reported once
+    [int]$Frequency
+)
 
     # if frequency is set to zero or lower, Get standard value from stettings
     if ($Frequency -le 0)
@@ -888,3290 +3178,270 @@ function Send-MbamErrorMessage
     }
 }
 
-function Get-MbamClientSecurityStatus
+#endregion
+
+
+#region 3.3 General report functions
+# ----------------------------
+#
+# Section for general report functions 
+#=====================================
+
+function Get-SystemOverview
 {
-    Test-MbamOSDiskProtectionStatus
-    Test-MbamDriveProtectionStatus
+<#
+.SYNOPSIS
+    Collects some system information.
+.DESCRIPTION
+    Collects some system information like hostname, model, bios, operating system etc.
+.EXAMPLE
+    PS C:\> Get-SystemOverview
+
+    Host                 : WinSrv12-MBAM.corp.fbpro
+    Manufacturer         : Microsoft Corporation
+    Model                : Virtual Machine
+    Type                 : x64-based PC
+    OperatingSystem      : Microsoft Windows Server 2012 R2 Standard
+    OSVersion            : 6.3.9600
+    OSArchitecture       : 64-bit
+    Last Boot Up Time    : 5/14/2018 11:24:07 AM
+    Free Physical Memory : 0.5425 GB
+    Free Disk Space      : 0.0705 GB
+    Free Disk Space C    : 45.6102 GB
+    Bios Manufacturer    : American Megatrends Inc.
+    Bios Version         : 090007 
+#>
+[CmdletBinding()]
+Param()
+
+    $obj = New-Object PSCustomObject
+
+
+    $obj | Add-Member -MemberType NoteProperty -Name 'Host' -Value ([System.Net.Dns]::GetHostByName(($env:computerName)) | Select-Object -ExpandProperty Hostname)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Manufacturer' -Value (Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Manufacturer)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Model' -Value (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Model)
+    $obj | Add-Member -MemberType NoteProperty -Name 'System Family' -Value (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty SystemFamily -ErrorAction SilentlyContinue)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Type' -Value (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty SystemType)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Bios Manufacturer' -Value (Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty Manufacturer)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Bios Version' -Value (Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty SMBIOSBIOSVersion)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Operating System' -Value (Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty Caption)
+    $obj | Add-Member -MemberType NoteProperty -Name 'OS Version' -Value (Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty Version)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Release ID' -Value ((Get-ItemProperty "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\" -Name ReleaseID -ErrorAction SilentlyContinue).ReleaseID)
+    $obj | Add-Member -MemberType NoteProperty -Name 'OS Architecture' -Value (Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty OSArchitecture)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Last Boot Up Time' -Value (Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty LastBootUpTime)
+    $obj | Add-Member -MemberType NoteProperty -Name 'Free Physical Memory' -Value ("{0:N4} GB" -f ((Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty FreePhysicalMemory)/1MB))
+    
+    foreach($volume in (Get-Volume | Where-Object DriveType -eq Fixed | Where-Object DriveLetter -ne $null))
+    {
+        $obj | Add-Member -MemberType NoteProperty -Name "Free Disk Space $($volume.DriveLetter)" -Value ("{0:N4} GB" -f ($volume.SizeRemaining/1GB))
+    }
+
+    Write-Output $obj
 }
 
-function Get-MbamClientApplicationStatus
+function ConvertTo-HtmlTable
 {
+<#
+.SYNOPSIS
+    Ouputs the note properties of an object in a html table.
+.DESCRIPTION
+    Ouputs the note properties of an object in a html table.
+.PARAMETER inputObject
+    The object to print in a html table
+.PARAMETER cssClass
+    An optional CSS class identifier
+#>
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true,ValueFromPipeline=$True)]
+    $inputObject,
+    [string]$cssClass
+)
+    Begin
+    {
+        if (($null -eq $cssClass) -or ($cssClass -eq ""))  
+        {
+            $result = "<table>"
+        }
+        else
+        {
+            $result ="<table class=`'$cssClass`'>" 
+        }
+    }
 
+    Process
+    {
+        # 
+        foreach($property in ($inputObject | Get-Member | Where-Object MemberType -like *property | Select-Object -ExpandProperty Name))
+        {
+            $result += "<tr><td>$property</td><td>$($inputObject.$property)</td></tr>"
+        }
+    }
+    End
+    {
+        $result += "</table>"
+
+        Write-Output $result
+    }
+}
+
+function ConvertTo-TapResultHtmlTable 
+{
+<#
+.Synopsis
+    Converts one or many TapResult objects to a html table. 
+.DESCRIPTION
+    Converts one or many TapResult objects to a html table  with one result per row. 
+    Newlines are converted into <br> (only in status column!).
+#>
+[CmdletBinding()]
+Param(  
+    [Parameter(
+        Position=0, 
+        Mandatory=$true, 
+        ValueFromPipeline=$true,
+        ValueFromPipelineByPropertyName=$true)
+    ]
+    [Alias('Test result')]
+    [TapResult[]]$inputObject
+) 
+
+    Begin 
+    {
+        Write-Output "<div style=`"overflow-x:auto;`"><table class=`"result-table`"><tr><th>ID</th><th>moduleID</th><th>Task</th><th>Status</th><th>Result</th></tr>"
+        $nl = [System.Environment]::NewLine
+    }
+    
+    Process 
+    {   
+        # Replace system new line with html br
+        $status = ($inputObject.status).Replace($nl, "<br>")
+
+        if ($inputObject.passed -eq 1)
+        {
+            Write-Output "<tr><td>$($inputObject.id)</td><td>$($inputObject.moduleID)</td><td>$($inputObject.task)</td><td>$status</td><td><span class=`"passed`">OK</span></td></tr>"
+        }
+        elseif ( ($inputObject.passed -eq 2) -or ($inputObject.passed -eq 4) )
+        {
+            Write-Output "<tr><td>$($inputObject.id)</td><td>$($inputObject.moduleID)</td><td>$($inputObject.task)</td><td>$status</td><td><span  class=`"failed`">!</span></td></tr>" 
+        }
+        elseif ($inputObject.passed -eq 3)
+        {
+            Write-Output "<tr><td>$($inputObject.id)</td><td>$($inputObject.moduleID)</td><td>$($inputObject.task)</td><td>$status</td><td><span  class=`"warning`">!</span></td></tr>" 
+        }
+    }
+
+    End 
+    {
+        Write-Output "</table></div>"      
+    }
+}
+
+function New-MBAMReportSectionHeader
+{
+<#
+.Synopsis
+    
+.DESCRIPTION
+    
+#>
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$true)]
-    [string]$agentVersion
-)
-
-Test-MbamClientSoftwareState
-Test-MbamClientAgentServiceState
-Test-MbamClientAgentVersion $agentVersion
-Test-MbamClient2ServerStatusReporting
-Test-MbamClient2ServerKeyReporting
-    
-}
-
-function Get-MbamClientInfrastructureStatus
-{
-
-    if (Get-Module -Name TrustedPlatformModule)
-    {
-        Test-MbamTPMStatus
-    }
-    else
-    {
-        # log error
-        $msg = "Module TrustedPlatformModule not found, skipping TPM tests."
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-    }
-    Test-MbamTpmOwnerShip
-    Test-MbamTpmVersion
-
-}
-
-function New-MbamClientHtmlStatusReport
-{
-<#
-.Synopsis
-    Creates a report with an overview of a MBAM clients status.
-.DESCRIPTION
-    Creates a report with an complete overview of a MBAM clients status. It gives a short info about the host followed by resluts of the application and securtiy checks. 
-.OUTPUTS
-    A HTML Report.
-.EXAMPLE
-    PS C:\ New-MbamClientHtmlStatusReport -title "My Report" -agentVersion "2.5.1126.0"
-#>
-    [CmdletBinding()]
-    Param(
-        [string]$title ="Mbam report",
-
-        [Parameter(Mandatory=$true)]
-        [string]$agentVersion
-    )
-
-
-        $date = Get-Date -Format g
-        $currentHost = [System.Net.Dns]::GetHostByName(($env:computerName)) | select -ExpandProperty Hostname
-        $osInfo = Get-OperatingSystemInfo
-        $lastBootUpTime = Get-SystemStartupTime
-        $freeRAM = "{0:N3}" -f ($osInfo.FreePhysicalMemory/1MB)
-        $freeDiskSpace = "{0:N1}" -f ((get-WmiObject win32_logicaldisk | where DeviceID -eq "C:" | select -ExpandProperty FreeSpace)/1GB)
-        $logo = $ConfigFile.Settings.Logo
+    $resultObjects,
         
-        Write-Output "<!DOCTYPE html>
-        <html>
-            <head>
-                <title>$title</title>
-                <style>
-                    html {margin: 0; padding: 0;}
-                    body {font-size: 14px; margin: 0; padding: 0 0 10px 0;}
-                    h1 {color: #fff;}
-                    h1 span {text-transform: uppercase;}
-                    h3 {margin-top: 40px; padding: 5px; max-width: 40%; text-transform: uppercase; background-color: #33cc33;}
-                    h1, h2,h3, p, table, img {margin-left: 20px;}
-                    p {font-size: 16px;}
-                    table {width: 80%; border: 1px solid darkgrey; border-collapse: collapse;font-family: Arial, sans-serif;}
-                    table.info {max-width: 600px; border: 1px solid black; border-collapse: collapse;font-family: Courier, sans-serif;}
-                    th {background-color: #d6d6c2; color: white; text-transform: uppercase; font-size: 1.5em; border-bottom: 1px solid darkgray;}
-                    th, td {padding: 5px 10px; text-align: left;}
-                    tr:nth-child(even) {background-color: #e6e6e6;}
-                    tr:hover {background-color: #a6a6a6;}
-                    td:first-child {width: 120px;}
-                    td:nth-child(3) {width: 200px;}
-                    td:last-child {width: 100px;}
-                    table.info td:first-child {width: 180px;}
-                    .header {background-color: #bfbfbf; width: 100%; padding: 20px 0;}
-                    .header img {text-align: center;}
-                    .passed {background-color: #33cc33; color: #fff;}
-                    .failed {background-color: #cc0000; color: #fff;}
-                    .warning {background-color: #ff9933; color: #fff;}
-                    .hostname {color: #3366ff; font-weight: bold;}
-                    span.passed, span.failed, span.warning {display: block; padding: 5px; border-radius: 30px; width: 25px; text-align: center; font-weight: bold; margin: auto;}
-                </style>
-            </head>
-            <body>
-                <div class=`"header`">
-                    <img src=`"$logo`">
-                    <h1><span>Microsoft Bitlocker</span> Administration and Monitoring</h1>
-                </div>
-                <h2>Client statusreport</h2>
-
-                <p>Report created at $date on <span class=`"hostname`">$currentHost</span></p>
-                
-                <table class=`"info`">
-                    <tr>
-                        <td>Host:</td>
-                        <td>$currentHost</span>
-                    </tr>
-                    <tr>
-                        <td>Operating System:</td>
-                        <td>"$osInfo.Caption"</span>
-                    </tr>
-                    <tr>
-                        <td>OS version:</td>
-                        <td>"$osInfo.Version"</span>
-                    </tr>
-                    <tr>
-                        <td>Last boot up time:</td>
-                        <td>$LastBootUpTime</span>
-                    </tr>
-                    <tr>
-                        <td>OS architecture:</td>
-                        <td>"$osInfo.OSArchitecture"</span>
-                    </tr>
-                    <tr>
-                        <td>Free physical memory (GB):</td>
-                        <td>$freeRAM</span>
-                    </tr> 
-                    <tr>
-                        <td>Free disk space (GB):</td>
-                        <td>$freeDiskSpace</span>
-                    </tr>                
-                </table>"
-
-        # Get and output infrastructure status
-        $status = Get-MbamClientInfrastructureStatus
-        if ($status -ne $null)
-        {
-            $header = "<h3>Infrastructure status:</h3>"
-            
-            foreach($o in $status)
-            {
-                if($o.passed -eq "false")
-                { 
-                    $header = "<h3 class=`"failed`">Infrastructure status:</h3>"
-                    break
-                }
-                if($o.passed -eq "warning")
-                { 
-                    $header = "<h3 class=`"warning`">Infrastructure status:</h3>"
-                }
-            }
-            Write-Output $header
-            $status | ConvertTo-HtmlTable
-        }
-
-        # Get and output Mbam appliciation status
-        $status = Get-MbamClientApplicationStatus $agentVersion
-        if ($status -ne $null)
-        {
-            $header = "<h3>Application status:</h3>"
-            
-            foreach($o in $status)
-            {
-                if($o.passed -eq "false")
-                { 
-                    $header = "<h3 class=`"failed`">Application status:</h3>"
-                    break
-                }
-                if($o.passed -eq "warning")
-                { 
-                    $header = "<h3 class=`"warning`">Application status:</h3>"
-                }
-            }
-
-            Write-Output $header
-            $status | ConvertTo-HtmlTable
-        }
-
-        # Get and output security status
-        $status = Get-MbamClientSecurityStatus
-        if ($status -ne $null)
-        {
-            $header = "<h3>Security Status:</h3>"
-            
-            foreach($o in $status)
-            {
-                if($o.passed -eq "false")
-                { 
-                    $header = "<h3 class=`"failed`">Security status:</h3>"
-                    break
-                }
-                if($o.passed -eq "warning")
-                { 
-                    $header = "<h3 class=`"warning`">Security status:</h3>"
-                }
-            }
-
-            Write-Output $header
-            $status | ConvertTo-HtmlTable
-        }
-
-        # Get and output GPO status
-        $status = Test-MbamGpos
-        if ($status -ne $null)
-        {
-            $header = "<h3>Group Policy Status:</h3>"
-            
-            foreach($o in $status)
-            {
-                if($o.passed -eq "false")
-                { 
-                    $header = "<h3 class=`"failed`">Group policy status:</h3>"
-                    break
-                }
-                if($o.passed -eq "warning")
-                { 
-                    $header = "<h3 class=`"warning`">Group policy status:</h3>"
-                }
-            }
-
-            Write-Output $header
-            $status | ConvertTo-HtmlTable
-        }
- 
-}
-
-
-
-<#
-    Server functions
-    ======================================================================
-#>
-
-function Get-ComplianceDBConnectState
-{
-<#
-.Synopsis
-   Get state of administration-website application (complianc database).
-.DESCRIPTION
-   Get state of the administration-website application and its connection status to the compliance database.
-   Therefore the last system startup is determined and afterwards the event log of Mbam-web/operational is checked for an event with ID 200 that contains the expression "Compliance database" in the message.
-   Until the website is not access since the last system reboot, no event log records will be created and therefore the function will return a "not found".
-.OUTPUTS
-   System.String returns a string with current connection status ("connected", "not connected" or "not found")
-.EXAMPLE
-   PS C:\ Get-ComplianceDBConnectState
-   Connected
-#>
- 
-    $lastStartup = Get-SystemStartupTime
-
-    try
-    {
-        $connected = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction Stop | where {$_.Message -Like "*Compliance database*" -and $_.ID -eq 200} 
-
-        if ($connected -ne $null)
-        {
-            Write-Output("Connected")
-        }
-        else 
-        {
-            Write-Output("Not connected")
-        }
-    }
-    catch 
-    {
-        Write-Output("Not found")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-    
-}
-
-function Get-RecoveryDBConnectState
-{
-<#
-.Synopsis
-    Get state of administration-website application (recovery database).
-.DESCRIPTION
-   Get state of the administration-website application and its connection status to compliance database to the recovery database.
-   Therefore the last system startup is determined and afterwards the event log of Mbam-web/operational is checked for an event with ID 200 that contains the expression "Recovery database" in the message.
-   Until the website is not access since the last system reboot, no event log record will be created and therefore the function will return a "not found"
-.OUTPUTS
-   System.String returns a string with current connection status ("connected", "not connected" or "not found")
-.EXAMPLE
-   PS C:\ Get-RecoveryDBConnectState
-   Connected
-#>
-       
-    $lastStartup = Get-SystemStartupTime
-
-    try 
-    {
-        $connected = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction Stop | where {$_.Message -Like "*Recovery database*" -and $_.ID -eq 200}
-
-        if ($connected -ne $null)
-        {
-            Write-Output("Connected")
-        }
-        else 
-        {
-            Write-Output("Not connected")
-        }
-    }
-    catch 
-    {
-        Write-Output("Not found")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-    
-}
-
-function Get-MbamHelpDeskSPNState
-{
-<#
-.Synopsis
-   Get if the HelpDesk has its Service Principal Name registered successfully.
-.DESCRIPTION
-   Get if the HelpDesk has its Service Principal Name registered successfully. Therefore the event log is checked for a record with ID 202 and message containing the phrase "HelpDesk" 
-   which was created after last system startup. If the HelpDesk website is not access since last startup, no record is created and the function will return "Not found" 
-.OUTPUTS
-    System.String returns a string with the SPN registration status ("Registered" or "Not found")
-.EXAMPLE
-    PS C:\ Get-MbamHelpDeskSPNState
-    Registered
-#>  
-
-    $lastStartup = Get-SystemStartupTime
-
-    try
-    {
-        $SPNregistered = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction stop | where {$_.Message -Like "*HelpDesk*" -and $_.ID -eq 202}
-
-        # service is registered, ohterwise, an ObjectNotFound exception is thrown
-        Write-Output("Registered")
-    }
-    catch
-    {
-        # no registration logged since last startup 
-        Write-Output("Not found")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-    
-}
-
-function Get-MbamSelfServiceSPNState
-{
-<#
-.Synopsis
-   Get if the SelfService Portal has its Service Principal Name registered successfully.
-.DESCRIPTION
-   Get if the SelfService Portal has its Service Principal Name registered successfully. Therefore the event log is checked for a record with ID 202 and message containing the phrase "SelfService" 
-   which was created after last system startup. If the HelpDesk website is not access since last startup, no record is created and the function will return "Not found" 
-.OUTPUTS
-    System.String returns a string with the SPN registration status ("Registered" or "Not found")
-.EXAMPLE
-    PS C:\ Get-MbamSelfServiceSPNState
-    Registered
-#>   
-
-    $lastStartup = Get-SystemStartupTime
-
-    try
-    {
-        $SPNregistered = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction stop | where {$_.Message -Like "*SelfService*" -and $_.ID -eq 202}
-
-        # portal is registered, ohterwise an ObjectNotFound exception is thrown
-        Write-Output("Registered") 
-    }
-    catch
-    {
-        # no registration logged since last startup
-        Write-Output("Not found")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }  
-}
-
-function Get-MbamWCFServiceState
-{
-<#
-.Synopsis
-   Get the state of a WCF-service for Mbam.
-.DESCRIPTION
-   Get the state of a Windows Communication Foundation service for Mbam. The following service types are possible
-   admin:  for the administration service
-   user:   for the user support service
-   report: for the status report service
-   core:   for the core service
-#>
-    
-    Param(
-        # service type, accepted values are admin, user, report or core
-        [Parameter(Mandatory=$true)]
-        [string]$type,
-
-        # credentials to authenticat against the web service
-        [Parameter(Mandatory=$true)]
-        [PSCredential]$credentials,
-
-        [Parameter(Mandatory=$true)]
-        [string]$uri
-    )
-
-    switch ($type)
-    {
-        'admin' {$service = "MbamAdministrationService/AdministrationService.svc"}
-        'user' {$service = "MbamUserSupportService/UserSupportService.svc"}
-        'report' {$service = "MbamComplianceStatusService/StatusReportingService.svc"}
-        'core' {$service = "MbamRecoveryAndHardwareService/CoreService.svc"}
-        Default {$service = "MbamAdministrationService/AdministrationService"}
-    }
-
-    try
-    {
-        $R = Invoke-WebRequest -URI "https://winsrv-Mbam.Mbam.local/$service" -Credential $credentials
-
-        if ($R.StatusCode -eq "200")
-        {
-            Write-Output("Running") 
-        }
-        else 
-        {
-           Write-Output("Not running")
-        }
-    }
-    catch
-    {
-        Write-Output("Unreachable")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }  
-}
-
-function Get-MbamSQLServerServiceState
-{
-<#
-.Synopsis
-   Get the state of a SQLServer instance
-.DESCRIPTION
-   Get the state of a SQLServer instance
-.EXAMPLE
-   Get-SQLServerServiceStat MSSQL`$Mbam_SQLSERVER
-.NOTES
-    Normally a SQLServer service name is something like MSSQL$<yourinstancename>. So we have a $-sign in the name which has to be escaped in order to work correctly with powershell
-#>
-    [CmdletBinding()]
-    Param
-    (
-        # The service name of the sqlserver instance, i.e. MSSQL$SQLSERVER
-        [Parameter(Mandatory=$true)]
-        $ServiceName
-    )
-
-    try {
-        $status = Get-service | where name -eq $ServiceName -ErrorAction stop| select -ExpandProperty Status
-
-        if ($status -ne $null)
-        {
-            # instance found, return status
-            Write-Output($status)
-        }
-        else 
-        {
-            # no SQL-server instance with $serviceName found
-            Write-Output("Not found")
-        }
-    }
-    catch
-    {
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }   
-}
-
-function Get-MbamFirewallPortState
-{
-<#
-.Synopsis
-   Get the firewall state of necessary port for Mbam.
-.DESCRIPTION
-   Get state of port 443 and if it allows inbound traffic to reach the webserver for Mbam HelpDesk and Administration
-.OUTPUTS
-    $true if port allows traffic
-    $false if port blocks traffic or port allows traffic but rule is disabled
-#>
-   
-    try
-    {   
-        # check firewall rule of port 443 (standard iis rule)
-        $rule = Get-NetFirewallRule | where -property name -eq IIS-WebserverRole-HTTPS-In-TCP 
-        
-        if($rule -ne $null)
-        {    
-            # rule exists, check status 
-            if ($rule.Enabled -eq "true")
-            {
-                # rule enabeld and allows traffice
-                if ($rule.Action -eq "Allow")
-                {   
-                    Write-Output($true)
-                }
-                # rule enabled and blocks traffic
-                else
-                {
-                    Write-Output($false)
-                }
-            }
-            else
-            {
-                # rule disabled
-                Write-Output($true) 
-            }  
-        }
-        else
-        {
-            # Standard IIS-Webserver rule for port 443 not found
-            Write-Output($true)
-        }
-    }
-    catch
-    {
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }   
-}
-
-function Get-MbamServerVersion25 
-{
-<#
-.Synopsis
-   Gets Mbam-Server version
-.DESCRIPTION
-   Gets the version number of the installed Mbam-Server
-.OUTPUTS
-   System.Object.String A string with the actual MABM version number
-#>   
-    try 
-    {
-        $currentVersion = Get-item 'HKLM:\SOFTWARE\Microsoft\Mbam Server' -ErrorAction Stop | Get-ItemProperty | select -ExpandProperty "Installed"
-        
-        Write-Output($currentVersion)
-    }
-    catch 
-    {
-       Write-Error("No Mbam-Server version >= 2.5 found")
-       Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-}
-
-function Get-MbamHostname
-{
-    try 
-    {
-        if(Get-Module Microsoft.MBAM)
-        {
-            Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty HostName -ErrorAction Stop
-        }
-        else
-        {
-            # log error
-            $msg = "Module Microsoft.MBAM not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        } 
-    }
-    catch
-    {
-        Write-Output ""
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-}
-
-function Get-UserLogins
-{
-    [CmdletBinding()]
-    Param(
-        [DateTime]$date = (Get-Date).AddDays(-1)
-    )
-
-    Get-WmiObject -class Win32_NetworkLoginProfile |select name, caption, @{Name="lastlogin"; Expression={$_.ConvertToDateTime($_.LastLogon)}} | where lastlogin -GT $date
-}
-
-
-
-# Client functions
-#############################
-
-function Get-MbamClientAgentVersion 
-{
-<#
-.Synopsis
-   Gets Mbam-Agent version
-.DESCRIPTION
-   Gets the Mbam-Agent version of a client
-.OUTPUTS
-   System.String The actual versionnumber of the installed Mbam-Agent version as string or zero if no client agent was found
-.NOTES
-   WinRM has to be activated on the remote machine to Get a version number of a remote client
-#>
-    try
-    {
-        Get-Item 'HKLM:SOFTWARE\Microsoft\Mbam' -ErrorAction Stop | Get-ItemProperty | select -ExpandProperty "AgentVersion"
-    }
-    catch
-    {
-        Write-Output "0"
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-}
-
-function Get-MbamOSDiskProtectionStatus
-{  
-<#
-.Synopsis
-   Get the protection status of the operating system hard disk drive
-.DESCRIPTION
-   Gets the protection status of the operating system hard disk drive. The mountpoint of this drive is assumed to be c:\
-#>  
-
-    try 
-    {
-        if (Get-Module BitLocker)
-        {
-            Get-BitLockerVolume -MountPoint "C:" | Select -ExpandProperty ProtectionStatus -ErrorAction Stop
-        }
-        else
-        {
-            # log error
-            $msg = "Module BitLocker not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        }    
-    }
-    catch
-    {
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }   
-}
-
-function Get-MbamDiskProtectionStatus
-{
-<#
-.Synopsis 
-   Get the protection status of given hard disk drives
-.DESCRIPTION
-   Gets the protection status of given hard disk drives. 
-.INPUTS
-    An array of hard disk mounting points
-.OUTPUTS
-    One protection status per given mounting point entry
-.EXAMPLE
-    Get-DiskProtectionStatus ("C:","D:")
-#>    
-
-    [CmdletBinding()]
     [Parameter(Mandatory=$true)]
-    param(
-        [string[]]$mountPoints
-    )
+    [string]$headertext,
 
-
-    try 
-    {
-        if (Get-Module BitLocker)
-        {
-            Get-BitLockerVolume -MountPoint $mountPoints | Select -ExpandProperty ProtectionStatus -ErrorAction Stop
-        }
-        else
-        {
-            # log error
-            $msg = "Module BitLocker not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        }
-    }
-    catch
-    {
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-}
-
-function Get-MbamGpoRuleState
-{
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [string]$PolicyKey,
-
-        [Parameter(Mandatory=$true)]
-        [string]$PolicyValue,
-
-        [Parameter(Mandatory=$true)]
-        [string]$path
-    )
-
-    try
-    {
-        $result = Get-Item $path -ErrorAction Stop | Get-ItemProperty | select -ExpandProperty $PolicyKey
-
-        if ($result -eq $null)
-        {
-            throw "Policy not found"
-            # log error
-            $msg = $_.Exception.toString()
-            $msg += "; " + $_.ScriptStackTrace.toString()
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-        }
-
-        if ($result -eq $PolicyValue)
-        {
-            return $true
-        }
-        else 
-        {
-            return $false
-        }
-    }
-    catch
-    {
-        throw "Policy not found"
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error     
-    }
-}
-
-
-##############################################################################################
-#                                                            
-# Section with test case functions for Microsoft Bitlocker and Monitoring  
-# =======================================================================  
-# 
-# All tests should return an object with following note propertys:
-#
-#  - Name (String) => the name of test case, i.e. a unique index
-#  - Task (String) => which result is expected
-#  - Status (String) => short despcription of test result, like "Passed" or a error description
-#  - Passed (String) => not passed = false; passed = true; warning = warning
-#                                                            
-############################################################################################### 
-
-
-<#
-    General server side test
-    ========================
-
-#>
-
-function Test-LocalAdmins
-{
-# TC-Mbam-0042
-#-------------
-
-<#
-.Synopsis
-    Tests if the members of the local admin group matches the list of members in the file.
-.DESCRIPTION
-    Tests if the members of the local admin group matches the list of members in the file.
-.INPUTS
-    A list of SamAccountNames of members which are assumed to be in the local admin group. Use new-LocalAdminsFile.ps1 in module directory to initally create a snapshot
-    of local admin group.
-.OUTPUTS
-    PSCustomObject  
-#>
-
-    Param(
-        [Parameter(Mandatory=$true)]
-        [Alias('LocalAdminGroupMembers')]
-        [string[]] $knownAdmins
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0042")
-    $obj | Add-Member NoteProperty Task("Members in local admin group are correct")
-
-    $admins = Get-LocalAdmins
-
-    if (-not($admins -eq $null) -and -not($knownAdmins -eq $null))
-    {
-        $compare = Compare-Object -ReferenceObject $admins -DifferenceObject $knownAdmins
-
-        $nl = [System.Environment]::NewLine
-
-        foreach($member in $compare) 
-        {  
-            if ($member.SideIndicator -eq "<=")
-            {
-                $unexpected += $member.InputObject + $nl
-                $unexpectedCounter++
-            }
-            elseif ($member.SideIndicator -eq "=>")
-            {
-                $missing += $member.InputObject + $nl
-                $missingCounter++
-            }
-        }
-
-        if ($missing -and $unexpected)    
-        {
-            $obj | Add-Member NoteProperty Status("Not listed members found ($unexpectedCounter): $nl $unexpected $nl Missing members($missingCounter): $nl $missing")
-            $obj | Add-Member NoteProperty Passed("false")
-            Write-LogFile -Path $LogPath -name $LogName -message "Local admins - not listed members found: $unexpected $nl Missing members: $missing" -Level Error
-        }
-        elseif ($unexpected) 
-        {
-            $obj | Add-Member NoteProperty Status("Not listed members found($unexpectedCounter): $nl $unexpected")
-            $obj | Add-Member NoteProperty Passed("false") 
-            Write-LogFile -Path $LogPath -name $LogName -message "Local admins - not listed members found: $unexpected" -Level Error   
-        }
-        elseif ($missing)
-        {
-            $obj | Add-Member NoteProperty Status("Missing members($missingCounter): $nl $missing")
-            $obj | Add-Member NoteProperty Passed("warning")
-            Write-LogFile -Path $LogPath -name $LogName -message "Local admins - missing members: $missing" -Level Warning
-        }
-        else 
-        {
-            $obj | Add-Member NoteProperty Status("All correct")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("An error occured while checking.")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message "An error occured. Either local admins could not be received or file knownLocalAdmins.txt is empty/could not be read"
-    }
-
-    Write-Output $obj
-}
-
-function Test-SccmClientUpdates
-{
-# TC-Mbam-0043
-#-------------
-
-<#
-.Synopsis
-    Tests if deployed and applicable updates are installed.
-.DESCRIPTION
-     Tests if deployed and applicable updates are installed. If updates are available a warning is returned with a list of applicable updates in the status property of the object.
-.OUTPUTS
-    PSCustomObject  
-#>
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0043")
-    $obj | Add-Member NoteProperty Task("All applicable updates via SCCM are installed.")
-
-    try 
-    {
-        $SCCMUpdates = Get-CimInstance -Namespace 'root\ccm\ClientSDK' -ClassName 'CCM_SoftwareUpdate' -ErrorAction Stop
-
-        if ($SCCMUpdates -eq $null)
-        {
-            # No updates applicable
-            $obj | Add-Member NoteProperty Status("No updates appliable")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $nl = [System.Environment]::NewLine
-            $index = 1
-
-            foreach($update in $SCCMUpdates)
-            {
-                $status += ($index++).ToString() + ": " + ($update.Name).Substring(0, [System.Math]::Min(75, $update.Name.Length)) + "..."
-                $status += $nl + "KB" + $update.ArticleID  + $nl + $nl
-                                
-            }
-
-            # Updates applicable
-            $obj | Add-Member NoteProperty Status("The following updates are applicable" + $nl + $status)
-            $obj | Add-Member NoteProperty Passed("warning")
-
-            # Also log applicable updates in logfile
-            Write-LogFile -Path $LogPath -name $LogName -message $status -Level Warning
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("SCCM client not installed.")
-        $obj | Add-Member NoteProperty Passed("true")
-        Write-LogFile -Path $LogPath -name $LogName -message "CCM class not found. SCCM client not installed?" -Level Error
-    }    
-
-    Write-Output $obj
-}
-
-function Test-LastUserLogins
-{
-# TC-Mbam-0044
-#-----------------
-
-<#
-.Synopsis
-   Checks, if only 
-.DESCRIPTION
-   Checks, if only 
-.OUTPUTS
-   PSCustomObject
-#>
-    [CmdletBinding()]
-    Param(
-        [string[]]$acceptedUsers
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0044")
-    $obj | Add-Member NoteProperty Task("Only expected logins within last 24h on machine")
-
-    $logins = Get-UserLogins
-
-    # Check, if we have any login
-    if ($logins -ne $null)
-    {
-        # Compare logged in usernames with the amount of accepted users to get only the users who are not accepted
-        $compare = Compare-Object -ReferenceObject $logins.caption -DifferenceObject $acceptedUsers
-
-        $nl = [System.Environment]::NewLine
-
-        foreach($user in $compare.InputObject)
-        {
-            foreach($login in $logins)
-            {
-                if ($user -eq $login.caption)
-                {
-                    $unexpected += $login.caption + " | " + $login.lastlogin + $nl
-                    break
-                }
-            }
-        }
-    }
-
-    if ($unexpected) 
-    {
-        $obj | Add-Member NoteProperty Status("Unexpected logins found: $nl $unexpected")
-        $obj | Add-Member NoteProperty Passed("warning") 
-        Write-LogFile -Path $LogPath -name $LogName -message "Unexpected logins found: $unexpected" -Level Warning   
-    }
-    else 
-    {
-        $obj | Add-Member NoteProperty Status("No unexpected logins found")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-
-    Write-Output $obj
-}
-
-function Test-DefaultDCConnection
-{
-# TC-Mbam-0047
-#-----------------
-
-<#
-.Synopsis
-   Checks, 
-.DESCRIPTION
-   Checks, 
-.OUTPUTS
-   PSCustomObject
-#>
-    
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0047")
-
-    try
-    {
-        $dc = Get-ADDomainController | select -ExpandProperty Name
-        $obj | Add-Member NoteProperty Task("Default Domain Controller $dc is reachable (Ping-Status)")
-
-        $connects = Test-Connection (Get-ADDomainController | select -ExpandProperty IPv4Address) -ErrorAction SilentlyContinue
-
-        if ($connects.count -eq 0)
-        {
-            $obj | Add-Member NoteProperty Status("Not reachable")
-            $obj | Add-Member NoteProperty Passed("false") 
-            Write-LogFile -Path $LogPath -name $LogName -message "Domain Controller $dc not reachable" -Level Error  
-        }
-
-        elseif ($connects.count -le 2)
-        {
-            $obj | Add-Member NoteProperty Status("Partial reachable (<=50%)")
-            $obj | Add-Member NoteProperty Passed("warning")
-            Write-LogFile -Path $LogPath -name $LogName -message "Domain Controller $dc partial reachable (<50%)" -Level Warning 
-        }
-
-        else
-        {
-            $obj | Add-Member NoteProperty Status("Reachable")
-            $obj | Add-Member NoteProperty Passed("true")           
-        }
-    }
-
-    catch 
-    {
-        $obj | Add-Member NoteProperty Task("Default Domain Controller is reachable (Ping-Status)")
-        $obj | Add-Member NoteProperty Status("Not reachable")
-        $obj | Add-Member NoteProperty Passed("false") 
-        Write-LogFile -Path $LogPath -name $LogName -message "Default Domain Controller not reachable" -Level Error  
-    }
-
-    Write-Output $obj
-}
-
-function Test-ForestDCsConnection
-{
-# TC-Mbam-0048
-#-----------------
-
-<#
-.Synopsis
-   The function pings all DC in a domain forest to check if they are available. 
-.DESCRIPTION
-   Gets all Domain Controllors in a forest and pings them. Returns a PSCustomObject for every found DC.
-   Domain Controllers matching with their IP address or name to an entry on the exception list are not pinged.
-   Exception list is for DC known to be listed but not reachable by ping because of e.g. firewall rules etc.
-.PARAM
-    $exceptionsList a List of strings representing IP addresses or DC names
-.OUTPUTS
-   PSCustomObject
-#>
-Param(
-    $exceptionList
+    [string]$anchor
 )
 
-try
-{
-    # get default domain controller
-    $defaultDC = Get-ADDomainController | select -ExpandProperty IPv4Address
-}
-catch
-{
+    $header = "<h3 id=`"$anchor`" class=`"passed`">$headertext</h3>"
+    $errCounter, $warnCounter = 0, 0
 
-}
-try
-{
-    # get all domain controller in forest except for default domain controller
-    $allDCs = (Get-ADForest).Domains | %{ Get-ADDomainController -Filter * -server $_} | where {$_.IPv4Address -NE $defaultDC}
-        
-    $i = 1
-
-    # test connection to each dc
-    foreach($dc in $allDCs)
+    foreach($obj in $resultObjects)
     {
-        # if $dc is not on the exception list ( with IP or name)
-        if (-not(($exceptionList.contains($dc.IPv4Address)) -or ($exceptionList.contains($dc.name))) )
-        {
-            # test connection, otherwise skip 
-            $obj = New-Object PSObject
-            $obj | Add-Member NoteProperty Name("TC-SSP-0011.$i")
-            $obj | Add-Member NoteProperty Task("Domain Controller "+$dc.Name+"("+$dc.IPv4Address+") is reachable (Ping-Status)")
-
-            if (Test-Connection $dc.IPv4Address -ErrorAction SilentlyContinue -Quiet)
-            {
-                $obj | Add-Member NoteProperty Status("Reachable")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Not reachable")
-                $obj | Add-Member NoteProperty Passed("false") 
-                Write-LogFile -Path $LogPath -name $LogName -message "Domain Controller $dc not reachable" -Level Error  
-            }
-
-            Write-Output $obj
-        }
-    }
-}
-# domain controllers / forest not reachable
-catch
-{
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-SSP-0011")
-    $obj | Add-Member NoteProperty Task("Domain Controller is reachable (Ping-Status)")
-    $obj | Add-Member NoteProperty Status("Not reachable")
-    $obj | Add-Member NoteProperty Passed("false") 
-    Write-Output $obj
-        
-    Write-LogFile -Path $LogPath -name $LogName -message "Domain Controllers in Forest not reachable" -Level Error  
-}
-}
-
-function Test-DNSServerConnection
-{
-# TC-Mbam-0046
-#-----------------
-
-<#
-.Synopsis
-    Checks, if the DNS servers in the environment are reachable.
-.DESCRIPTION
-    Checks, if the DNS servers in the environment are reachable. Private network addresses like IPv4 169.* and IPv6 fec0: are skipped.
-.OUTPUTS
-   PSCustomObject
-#>
-    $serverIPs = Get-DnsClientServerAddress | select -ExpandProperty ServerAddresses -Unique
-    $counter = 1
-
-    foreach($ip in $serverIPs)
-    {
-         # Check for private network ip addresses and skip them
-        if ( (-not $ip.StartsWith("fec0")) -and (-not $ip.StartsWith("169")) )
-        {
-            $obj = New-Object PSObject
-            $obj | Add-Member NoteProperty Name("TC-Mbam-0046.$counter")
-            $obj | Add-Member NoteProperty Task("DNS-Server with IP $ip is reachable (Ping-Status)")
-
-            if (Test-Connection $ip -ErrorAction SilentlyContinue -Quiet) 
-                        {
-            $obj | Add-Member NoteProperty Status("Reachable")
-            $obj | Add-Member NoteProperty Passed("true") 
-        }
-            else 
-                            {
-            $obj | Add-Member NoteProperty Status("Not reachable")
-            $obj | Add-Member NoteProperty Passed("false")
-            Write-LogFile -Path $LogPath -name $LogName -message "DNS-server with IP $ip not reachable " -Level Error   
-        }
-
-            Write-Output $obj
-
-            $counter++
-        }
-    }
-}
-
-function Test-MaintenanceModeOn
-{
-# TC-Mbam-0034
-#-----------------
-
-<#
-.Synopsis
-   Checks, if maintenance mode is on for server.
-.DESCRIPTION
-   Checks, if maintenance mode is on for server.
-.PARAMETERS
-    System.String $pathToLogFile Filepath to the MMTool log file
-.OUTPUTS
-   PSCustomObject
-#>
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [string]$pathToLogFile
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0034")
-    $obj | Add-Member NoteProperty Task("Maintenance mode for server is off")
-
-
-    if ((Get-MaintenanceMode $pathToLogFile) -eq $false)
-    {
-        $obj | Add-Member NoteProperty Status("Maintenance mode OFF")
-        $obj | Add-Member NoteProperty Passed("true") 
-        
-    }
-    else 
-    {
-        $obj | Add-Member NoteProperty Status("Maintenance mode ON")
-        $obj | Add-Member NoteProperty Passed("warning")
-        Write-LogFile -Path $LogPath -name $LogName -message "Maintenance mode ON" -Level Warning   
-    }
-
-    Write-Output $obj
-}
-
-
-<#
-    MBAM specific server test
-    =========================
-
-#>
-
-function Test-MbamComplianceDbConnectState
-{
-# TC-Mbam-0001
-#-------------
-
-<#
-.Synopsis
-   Tests wether the administration-website application was found and successfully connected to the compliance database
-.DESCRIPTION
-   Tests wether the administration-website application was found and successfully connected to the compliance database.
-   Therefore the last system startup is determined and afterwards the event log of Mbam-web/operational is checked for an event with ID 200 that contains the expression "Compliance database" in the message.
-   Until the website is not access since the last system reboot, no event log records will be created and therefore the function will return a PSCustomObject with status "not found".
-.OUTPUTS
- PSCustomObject
-.EXAMPLE
-   Test-ComplianceDBConnectState
-
-   Name            Task                                                    Status          Passed
-   ----            ----                                                    ------          ------
-   TC-Mbam-0001    Administration-website application found and success... Connected       True
-   
-#>
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0001")
-    $obj | Add-Member NoteProperty Task("Administration-website application found and successfully connected to compliance database")
-        
-    $lastStartup = Get-SystemStartupTime
-
-    try
-    {
-        # In case the HelpDesk webpage was not called since the last system startup, we trigger a simple call to it, but without a output.
-        # After that the event we will be looking for in the event log should be created, otherwise there is something wrong
-        Test-MbamHelpDeskPage | Out-Null
-
-        $connected = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction Stop | where {$_.Message -Like "*Compliance database*" -and $_.ID -eq 200} 
-
-        if ($connected -ne $null)
-        {
-            # Event was found and connection to database was once established
-            $obj | Add-Member NoteProperty Status("Connected")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else 
-        {
-            # Event still not found, something could be wrong.
-            $obj | Add-Member NoteProperty Status("Not connected")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    catch 
-    {
-        $obj | Add-Member NoteProperty Status("Not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-
-}
-
-function Test-MbamRecoveryDbConnectState
-{
-
-# TC-Mbam-0002
-#-------------
-
-<#
-.Synopsis
-    Tests wether the administration-website application was found and successfully connected to the recovery database
-.DESCRIPTION
-    Tests wether the administration-website application was found and successfully connected to the recovery database.
-    Therefore the last system startup is determined and afterwards the event log of Mbam-web/operational is checked for an event with ID 200 that contains the expression "Recovery database" in the message.
-    Until the website is not access since the last system reboot, no event log record will be created and therefore the function will return a PSCustomObject with status "not found".
-.OUTPUTS
-    PSCustomObject
-.EXAMPLE
-    Test-RecoveryDBConnectState
-   
-    Name            Task                                                    Status          Passed
-    ----            ----                                                    ------          ------
-    TC-Mbam-0002    Administration-website application found and success... Connected       True
-#>
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0002")
-    $obj | Add-Member NoteProperty Task("Administration-website application found and successfully connected to recovery database")
-        
-    $lastStartup = Get-SystemStartupTime
-
-    try 
-    {
-        # In case the HelpDesk webpage was not called since the last system startup, we trigger a simple call to it, but without a output.
-        # After that the event we will be looking for in the event log should be created, otherwise there is something wrong
-        Test-MbamHelpDeskPage | Out-Null
-
-        $connected = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction Stop | where {$_.Message -Like "*Recovery database*" -and $_.ID -eq 200}
-
-        if ($connected -ne $null)
-        {  
-            # Event was found and connection to database was once established
-            $obj | Add-Member NoteProperty Status("Connected")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else 
-        {
-            # Event still not found, something could be wrong.
-            $obj | Add-Member NoteProperty Status("Not connected")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("Not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error 
-    }
-
-    Write-Output $obj    
-}
-
-function Test-MbamHelpDeskSPNState
-{
-# TC-Mbam-0004
-#-------------
-
-<#
-.Synopsis
-    Tests if the HelpDesk has its Service Principal Name registered successfully.
-.DESCRIPTION
-    Tests if the HelpDesk has its Service Principal Name registered successfully. Therefore the event log is checked for a record with ID 202 and message containing the phrase "HelpDesk" 
-    which was created after last system startup. If the HelpDesk website is not access since last startup, no record is created and the function will return "Not registered" 
-.OUTPUTS
-    PSCustomObject
-#>  
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0004")
-    $obj | Add-Member NoteProperty Task("HelpDesk has its Service Principal Name registered successfully")
-
-    $lastStartup = Get-SystemStartupTime
-
-    try
-    {
-        $SPNregistered = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction stop | where {$_.Message -Like "*HelpDesk*" -and $_.ID -eq 202}
-
-        # Set status, if no log record was found, an ObjectNotFound exception is thrown
-        $obj | Add-Member NoteProperty Status("Registered")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-    catch
-    {
-        # No registration logged since last startup
-        $obj | Add-Member NoteProperty Status("Not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
+        if ( ($obj.passed -eq 2) -or ($obj.passed -eq 4) ) { $errCounter++ }
+        if ($obj.passed -eq 3) { $warnCounter++ }
+    } 
     
-}
-
-function Test-MbamSelfServiceSPNState
-{
-# TC-Mbam-0005
-#-------------
-
-<#
-.Synopsis
-    Tests if the SelfService Portal has its Service Principal Name registered successfully.
-.DESCRIPTION
-    Tests if the SelfService Portal has its Service Principal Name registered successfully. Therefore the event log is checked for a record with ID 202 and message containing the phrase "SelfService" 
-    which was created after last system startup. If the HelpDesk website is not access since last startup, no record is created and the function will return a PSCustomObject with status "Not found". 
-.OUTPUTS
-    PSCustomObject
-#>   
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0005")
-    $obj | Add-Member NoteProperty Task("SelfService Portal has its Service Principal Name registered successfully")
-
-    $lastStartup = Get-SystemStartupTime
-
-    try
-    {
-        $SPNregistered = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam-web/operational";StartTime=$lastStartup;} -ErrorAction stop | where {$_.Message -Like "*SelfService*" -and $_.ID -eq 202}
-
-        # Set status, if no log record was found, an ObjectNotFound exception is thrown
-        $obj | Add-Member NoteProperty Status("Registered")
-        $obj | Add-Member NoteProperty Passed("true")
-            
-    }
-    catch
-    {
-        # No registration logged since last startup
-        $obj | Add-Member NoteProperty Status("Not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-
-}
-
-function Test-MbamWCFServiceState
-{
-# TC-Mbam-0006
-#-------------
-
-<#
-.Synopsis
-    Tests the state of a WCF-service for Mbam.
-.DESCRIPTION
-    Tests the state of a Windows Communication Foundation service for Mbam. The following service types are possible
-    admin:  for the administration service
-    user:   for the user support service
-    report: for the status report service
-    core:   for the core service   
-.OUTPUTS 
-    PSCustomObject
-.EXAMPLE
-    Test-MbamWCFServiceState -type admin -credentials domain\username
-#>
-    Param(
-        # service type, accepted values are admin, user, report or core
-        [Parameter(Mandatory=$true)]
-        [string]$type,
-
-        # credentials to authenticat against the web service
-        [Parameter(Mandatory=$true)]
-        [PSCredential]$credentials,
-
-        [Parameter(Mandatory=$true)]
-        [string]$uri
-    )
-
-    Switch ($type)
-    {
-        'admin' {$service = "MbamAdministrationService/AdministrationService.svc"}
-        'user' {$service = "MbamUserSupportService/UserSupportService.svc"}
-        'report' {$service = "MbamComplianceStatusService/StatusReportingService.svc"}
-        'core' {$service = "MbamRecoveryAndHardwareService/CoreService.svc"}
-        Default {$service = "MbamAdministrationService/AdministrationService"}
-    }
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0006")
-    $obj | Add-Member NoteProperty Task("WCF service '$service' state:")
-
-    Try
-    {
-        $R = Invoke-WebRequest -URI "$uri/$service" -Credential $credentials
-
-        if ($R.StatusCode -eq "200")
-        {
-            $obj | Add-Member NoteProperty Status("Running")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else 
-        {
-            $obj | Add-Member NoteProperty Status("Not running")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    Catch
-    {
-        $obj | Add-Member NoteProperty Status("Unreachable")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-    
-}
-
-function Test-MbamSQLServerServiceState
-{
-<#
-.Synopsis
-   Tests the state of a SQLServer instance
-.DESCRIPTION
-   Tests the state of a SQLServer instance
-.EXAMPLE
-   Test-SQLServerServiceStat MSSQL`$Mbam_SQLSERVER
-   Running
-.NOTES
-    Normally a SQLServer service name is something like MSSQL$<yourinstancename>. So we have a $-sign in the name which has to be escaped in order to work correctly with powershell
-#>
-    [CmdletBinding()]
-    Param
-    (
-        # The service name of the sqlserver instance, i.e. MSSQL$SQLSERVER
-        [Parameter(Mandatory=$true)]
-        $ServiceName
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0012")
-    $obj | Add-Member NoteProperty Task("State of a SQLServer instance: $ServiceName")
-
-    try
-    {
-        $status = Get-service | where name -eq $ServiceName -ErrorAction stop| select -ExpandProperty Status
-
-        if ($status -ne $null)
-        {
-            # instance found, set status
-            $obj | Add-Member NoteProperty Status($status)
-
-            # SQL-server is up and runnning
-            if ($status -eq "running")
-            {
-                $obj | Add-Member NoteProperty Passed("true") 
-            }
-            # SQL-server is paused or stopped
-            else
-            {     
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-        }
-        else 
-        {
-            # no SQL-server instance with $serviceName found
-            $obj | Add-Member NoteProperty Status("Not found")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    catch
-    {
-        # no SQL-server instance with $serviceName found
-        $obj | Add-Member NoteProperty Status("Not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamComplianceDbServerConnection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
-{
-# TC-Mbam-0013.1
-#---------------  
-
-    try 
-    {
-        if(get-Module Microsoft.MBAM)
-        {
-            $connectionString = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty ComplianceAndAuditDBConnectionString
-        }
-        else
-        {
-            # log error
-            $msg = "PowerShell module Microsoft.MBAM not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        }
-
-        if($connectionString.Contains('\'))
-        {
-            # named sql instance
-            $destination = $connectionString.Substring(12, $connectionString.LastIndexOf('\')-12)
-        }
-        else
-        {
-            # standard sql instance
-            $destination = $connectionString.Substring(12, $connectionString.IndexOf(';')-12)
-        }
-
-        $obj = Test-MbamSQLServerConnection $destination
-    }
-    catch
-    {
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Status("Could not retrieve FQDN of SQL-Server")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0013.1")
-    $obj | Add-Member NoteProperty Task("Mbam Compliance Database Server $destination is reachable")
-
-    Write-Output $obj
-}
-
-function Test-MbamRecoveryDbServerConnection
-{
-# TC-Mbam-0013.2
-#---------------  
-
-    try
-    {
-        if(Get-Module Microsoft.MBAM)
-        {
-            $connectionString = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty RecoveryDBConnectionString
-        }
-        else
-        {
-            # log error
-            $msg = "PowerShell module Microsoft.MBAM not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        }
-
-        if($connectionString.Contains('\'))
-        {
-            # named sql instance
-            $destination = $connectionString.Substring(12, $connectionString.LastIndexOf('\')-12)
-        }
-        else
-        {
-            # standard sql instance
-            $destination = $connectionString.Substring(12, $connectionString.IndexOf(';')-12)
-        }
-
-        $obj = Test-MbamSQLServerConnection $destination
-    }
-    catch
-    {
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Status("Could not retrieve FQDN of SQL-Server")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0013.2")
-    $obj | Add-Member NoteProperty Task("Mbam Recovery Database Server $destination is reachable")
-
-    Write-Output $obj
-}
-
-function Test-MbamHelpDeskPage
-{
-# TC-Mbam-0015
-
-<#
-.Synopsis
-   Checks, if the HelpDesk page is reachable
-.DESCRIPTION
-   Checks, if the HelpDesk page is reachable. At this time it only checks https connections. 
-.OUTPUTS
-    PSCustomObject
-#>
-    [CmdletBinding()]
-    Param(
-        # Check with SSL connection
-        [switch]$https
-    )    
-
-    $server = Get-MbamHostname
-    if(Get-Module Microsoft.MBAM)
-    {
-        $helpdesk = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty VirtualDirectory 
-    }
-    else
-    {
-            # log error
-            $msg = "PowerShell module Microsoft.MBAM not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        }
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0015")
-    $obj | Add-Member NoteProperty Task("HelpDesk page $server$helpdesk is reachable")   
-  
-    $protocol = @{$true = "https://"; $false = "http://"}[$https -eq $true] 
-
-    Try 
-    {
-           # this webrequest should fail because it makes a request without credentials, but if we Get a 401, the page is running
-           Invoke-WebRequest -URI ($protocol+$server+$helpdesk)
-        }
-    Catch [System.Net.WebException]
-    {
-            # let's check if we are not authorized, which in this case is good because the page seems to be running
-            if ($_.ErrorDetails.Message -like "*401.2 - Unauthorized*")
-            {
-                $obj | Add-Member NoteProperty Status("Reachable")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Not reachable")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-           
-        }
-    Catch
-    {
-            $obj | Add-Member NoteProperty Status("Not reachable")
-            $obj | Add-Member NoteProperty Passed("false")
-            Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-        }
-
-    Write-Output $obj
-    
-}
-
-function Test-MbamSelfServicePage
-{
-# TC-Mbam-0016
-
-<#
-.Synopsis
-   Checks, if the HelpDesk page is reachable
-.DESCRIPTION
-   Checks, if the HelpDesk page is reachable. At this time it only checks https connections. 
-.OUTPUTS
-    PSCustomObject
-#>
-    [CmdletBinding()]
-    Param(
-        # Check with SSL connection
-        [switch]$https
-    )
-    
-    
-    $server = Get-MbamHostname
-
-    if(Get-Module Microsoft.MBAM)
-    {
-        $selfservice = Get-MbamWebApplication -SelfServicePortal | select -ExpandProperty VirtualDirectory 
-    }
-    else
-    {
-        # log error
-        $msg = "PowerShell module Microsoft.MBAM not found"
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning 
-    }
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0016")
-    $obj | Add-Member NoteProperty Task("SelfService page $server$selfservice is reachable")
-
-   
-    $protocol = @{$true = "https://"; $false = "http://"}[$https -eq $true]  
-
-    try 
-    {
-        # this webrequest should fail because it makes a request without credentials, but if we get a 401, the page is running
-        Invoke-WebRequest -URI ($protocol+$server+$selfservice)
-    }
-    catch [System.Net.WebException]
-    {
-        # let's check if we are not authorized, which in this case is good because the page seems to be running
-        if ($_.ErrorDetails.Message -like "*401.2 - Unauthorized*")
-        {
-            $obj | Add-Member NoteProperty Status("Reachable")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("Not reachable")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-           
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("Not reachable")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamFirewallPortState
-{
-# TC-Mbam-0017
-
-<#
-.Synopsis
-   Tests the firewall for IIS rule on port 443 for Mbam.
-.DESCRIPTION
-   Tests, if port 443 allows inbound traffic to reach the webserver for Mbam HelpDesk and Administration
-.OUTPUTS
-    $true if port allows traffic
-    $false if port blocks traffic, port allows traffic but rule is disabled or rule is not found
-#>
-        
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0017")
-    $obj | Add-Member NoteProperty Task("Port 443 allows inbound traffic to reach the webserver for Mbam HelpDesk and Administration")
-
-    try
-    {
-        # check firewall rule of port 443 (standard iis rule)
-        $rule = Get-NetFirewallRule | where -property name -eq IIS-WebserverRole-HTTPS-In-TCP 
-        
-        if($rule -ne $null)
-        {     
-            if ($rule.Enabled -eq "true")
-            {
-                if ($rule.Action -eq "Allow")
-                {
-                    $obj | Add-Member NoteProperty Status("Enabled, Allow")
-                    $obj | Add-Member NoteProperty Passed("true")
-                }
-                else
-                {
-                    $obj | Add-Member NoteProperty Status("Enabled, Block")
-                    $obj | Add-Member NoteProperty Passed("false")
-                }
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Disabled")
-                $obj | Add-Member NoteProperty Passed("true") 
-            }  
-        }
-        else
-        {
-            # Standard IIS-Webserver rule for port 443 not found
-            $obj | Add-Member NoteProperty Status("Not found")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occured, see log file for more info!")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamWebServerRoleState 
-{
-# TC-Mbam-0018
-#-------------
-
-<#
-.Synopsis
-   Checks, if webserver role is installed
-.DESCRIPTION
-   Checks, if webserver role is installed
-.OUTPUTS
-    PSCustomObject
-#>   
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0018")
-
-    $f = Get-WindowsFeature Web-Server 
-
-    $obj | Add-Member NoteProperty Task("Windows Webserver role")
-    $obj | Add-Member NoteProperty Status($f.InstallState.ToString())
-    if ($f.Installed)
-    {
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-    elseif (-not $f.Installed)
-    {
-        $obj | Add-Member NoteProperty Passed("false")
-    }
-    else 
-    {
-        $obj | Add-Member NoteProperty Passed("warning")
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamWebserverFeatureState 
-{
-# TC-Mbam-0019
-#-------------
-
-<#
-.Synopsis
-   Checks, if all necessary webserver features for Mbam are installed
-.DESCRIPTION
-   Checks, if all necessary webserver features for Mbam are installed
-.OUTPUTs
-    PSCustomObject
-.EXAMPLE
-    Test-MbamWebserverFeatureState 
-    Name             Task                                                       Status          Passed
-    ----             ----                                                       ------          ------
-    TC-Mbam-0019.1   Windows Feature: Statischer Inhalt (Web-Static-Content)    Installed       True
-    TC-Mbam-0019.2   Windows Feature: Standarddokument (Web-Default-Doc)        Installed       True
-    TC-Mbam-0019.3   Windows Feature: ASP.NET 4.5 (Web-Asp-Net45)               Installed       True
-    ...
-#>   
-    [CmdletBinding()]
-    param(
-        $featureList = @(
-            'Web-Static-Content', 
-            'Web-Default-Doc',
-            'Web-Asp-Net45', 
-            'Web-Net-Ext45', 
-            'Web-ISAPI-Ext', 
-            'Web-ISAPI-Filter', 
-            'Web-Windows-Auth', 
-            'Web-Filtering')
-    )
-    
-    $i = 1
-
-    foreach($feature in $featureList)
-    {
-        $f = Get-WindowsFeature $feature
-
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0019.$i")
-        $name = $f.DisplayName
-        $obj | Add-Member NoteProperty Task("Windows Feature: $name ($feature)")
-        $obj | Add-Member NoteProperty Status($f.InstallState.ToString())
-        if ($f.Installed)
-        {
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        elseif (-not $f.Installed)
-        {
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-        else 
-        {
-            $obj | Add-Member NoteProperty Passed("warning")
-        }
-
-        Write-Output $obj
-        $i++
-    }
-}
-
-function Test-MbamWebserverServiceState
-{
-# TC-Mbam-0020
-#-------------
-
-<#
-.Synopsis
-   Checks, if the web server services are running
-.DESCRIPTION
-   Checks, if the web server services are running
-.OUTPUTs
-   PSCustomObject
-#>
-    [CmdletBinding()]
-    param(
-        $serviceList = @(
-            'WAS', 
-            'W3SVC')
-    )
-
-
-    $i = 1
-
-    foreach($service in $serviceList)
-    {
-        $s = Get-service | where name -eq $service
-
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0020.$i")
-        $name = $s.DisplayName
-        $obj | Add-Member NoteProperty Task("Webserver service: $name ($service)")
-
-        if($s -ne $null)
-        {
-            # service found, add status 
-            $obj | Add-Member NoteProperty Status(($s.Status).ToString())
-
-            if ($s.Status -eq "running")
-            {
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else 
-            {
-                # service paused or stopped
-                $obj | Add-Member NoteProperty Passed("warning")
-            }
-            }
-            else 
-            {
-            # service not found
-            $obj | Add-Member NoteProperty Status("Not found")
-            $obj | Add-Member NoteProperty Passed("false")
-
-            }
-
-        Write-Output $obj
-        $i++
-    }
-}
-
-function Test-MbamWindowsFeatureState 
-{
-# TC-Mbam-0021
-#-------------
-
-<#
-.Synopsis
-   Checks, if all necessary windows features for Mbam are installed
-.DESCRIPTION
-   Checks, if all necessary windows features for Mbam are installed
-.OUTPUTs
-    PSCustomObject
-.EXAMPLE
-    Test-MbamWindowsFeatureState 
-    Name             Task                                                      Status       Passed
-    ----             ----                                                      ------       ------
-    TC-Mbam-0021.1   Windows Feature: .NET Framework 4.5 (Net-Framework-4...   Installed    True
-    TC-Mbam-0021.2   Windows Feature: HTTP-Aktivierung (NET-WCF-HTTP-Acti...   Installed    True
-    ...
-#>   
-    [CmdletBinding()]
-    param(
-        $featureList = @(
-            'Net-Framework-45-Core', 
-            'NET-WCF-HTTP-Activation45', 
-            'NET-WCF-TCP-Activation45', 
-            'WAS-Process-Model', 
-            'WAS-NET-Environment', 
-            'WAS-Config-APIs')
-    )
-    
-        $i = 1
-
-    foreach($feature in $featureList)
-    {
-        $f = Get-WindowsFeature $feature
-
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0021.$i")
-        $name = $f.DisplayName
-        $obj | Add-Member NoteProperty Task("Windows Feature: $name ($feature)")
-        $obj | Add-Member NoteProperty Status($f.InstallState.ToString())
-        if ($f.Installed)
-        {
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        elseif (-not $f.Installed)
-        {
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-        else 
-        {
-            $obj | Add-Member NoteProperty Passed("warning")
-        }
-
-        Write-Output $obj
-        $i++
-    }
-}
-
-function Test-MbamServerVersion25 
-{ 
-# TC-Mbam-0032
-#-----------------
-
-<#
-.Synopsis
-   Checks, if Mbam-Server version is correct
-.DESCRIPTION
-   Checks, if the version number of the installed Mbam-Server is like the passed version number 
-.OUTPUTS
-   PSCustomObject
-#>  
-    Param(
-        # Version number
-        [Parameter(Mandatory=$true)]
-        [string]$version
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0032")
-    $obj | Add-Member NoteProperty Task("Mbam-server version")
-
-    try 
-    {
-        $currentVersion = Get-item 'HKLM:\SOFTWARE\Microsoft\Mbam Server' -ErrorAction Stop | Get-ItemProperty | select -ExpandProperty "Installed"
-        
-        if ($version -eq $currentVersion)
-        {
-            $obj | Add-Member NoteProperty Status("Version correct, installed version is $currentVersion")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("Versions differ, installed version is $currentVersion")
-            $obj | Add-Member NoteProperty Passed("warning")
-        }
-    }
-    catch 
-    {
-       $obj | Add-Member NoteProperty Status("No Mbam-Server Version >= 2.5 found")
-       $obj | Add-Member NoteProperty Passed("false")
-       write-LogFile -Path $LogPath -name $LogName -Message "Could not retrieve Mbam version. No registry entry for Mbam version >= 2.5 found"  -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamSecurityGrpMembers 
-{
-# TC-Mbam-0035
-#-----------------
-
-<#
-.Synopsis
-   Checks, if only autherized members are in the security group
-.DESCRIPTION
-   Checks, if only autherized members are in the given security group
-.OUTPUTS
-   PSCustomObject
-#>
-    [CmdletBinding()]
-    Param(
-        # The Mbam security group to check
-        [Parameter(Mandatory=$true)]
-        [ValidateSet(“AdvHelpDesk”,”HelpDesk”,”ReportsRO”)] 
-        [string]$group,
-
-        # Members that should be in the security group
-        [Parameter(Mandatory=$true)]
-        [string[]]$members  
-    )
-
-    if(Get-Module Microsoft.MBAM)
-    {
-        switch($group)
-        {
-            "AdvHelpDesk" { $groupname = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty AdvancedHelpdeskAccessGroup -ErrorAction Stop; $i = 1}
-    
-            "HelpDesk" { $groupname = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty HelpdeskAccessGroup -ErrorAction Stop; $i = 2}
-
-            "ReportsRO" { $groupname = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty ReportsReadOnlyAccessGroup -ErrorAction Stop; $i = 3}
-        }
-    }
-    else
-    {
-        # log error
-        $msg = "PowerShell module Microsoft.MBAM not found"
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-        return
-    }
-
-    $groupname = $groupname.Remove(0, $groupname.IndexOf('\')+1)
-    
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0035.$i")
-    $obj | Add-Member NoteProperty Task("Security group members in Group $groupname are correct")
-
-    try 
-    {
-        
-        if(Get-Module ActiveDirectory)
-        {
-            $admins = Get-ADGroupMember $groupname -Recursive | select -ExpandProperty SamAccountName
-        }
-        else
-        {
-            # log error
-            $msg = "PowerShell module ActiveDirectory not found"
-            write-LogFile -Path $LogPath -name $LogName -message $msg -Level Warning
-            return
-        }
-
-        $nl = [System.Environment]::NewLine
-
-        $compare = Compare-Object -ReferenceObject $admins -DifferenceObject $members -ErrorAction Stop
-        $unexpectedCounter, $missingCounter = 0, 0
-
-
-        foreach($member in $compare) 
-        {  
-            if ($member.SideIndicator -eq "<=")
-            {
-                $unexpected += $member.InputObject + $nl
-                $unexpectedCounter++
-            }
-            elseif ($member.SideIndicator -eq "=>")
-            {
-                $missing += $member.InputObject + $nl
-                $missingCounter++
-            }
-        }
-
-        if ($missing -and $unexpected)    
-        {
-            $obj | Add-Member NoteProperty Status("Not listed members found ($unexpectedCounter): $nl $unexpected $nl Missing members ($missingCounter): $nl $missing")
-            $obj | Add-Member NoteProperty Passed("false")
-            Write-LogFile -Path $LogPath -name $LogName -message "Not listed members found ($unexpectedCounter): $nl $unexpected $nl Missing members ($missingCounter): $nl $missing" -Level Error
-        }
-        elseif ($unexpected) 
-        {
-            $obj | Add-Member NoteProperty Status("Not listed members found ($unexpectedCounter): $nl $unexpected")
-            $obj | Add-Member NoteProperty Passed("false") 
-            Write-LogFile -Path $LogPath -name $LogName -message "Not listed members found ($unexpectedCounter): $unexpected" -Level Error   
-        }
-        elseif ($missing)
-        {
-            $obj | Add-Member NoteProperty Status("Missing members ($missingCounter): $nl $missing")
-            $obj | Add-Member NoteProperty Passed("warning")
-            Write-LogFile -Path $LogPath -name $LogName -message "Missing members ($missingCounter): $missing" -Level Warning
-        }
-        else 
-        {
-            $obj | Add-Member NoteProperty Status("All correct")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occured while checking.")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamSSLCertificateExpirationDate
-{
-# TC-Mbam-0039
-#-----------------
-
-<#
-.Synopsis
-   Checks, if the certificate of the Mbam Webserver is valid.
-.DESCRIPTION
-   Checks, if the certificate of the Mbam Webserver is valid.
-.OUTPUTS
-   PSCustomObject
-#>
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0039")
-    $obj | Add-Member NoteProperty Task("Certificate expiration date not reached")
-
-    try 
-    {
-        $host = Get-MbamHostname
-
-        $binding = Get-WebBinding -HostHeader $host
-
-        $certObj = get-item ("cert:\LocalMachine\"+$binding.certificateStoreName+"\"+$binding.certificateHash) | select *
-
-        $days = ($certObj.NotAfter.Date - (Get-Date).Date).Days
-       
-        if (($days -le $ConfigFile.Settings.CertificateExpiresWarning) -and ($days -ge 0))
-        {
-            $obj | Add-Member NoteProperty Status("Certificate expires in $days days")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-        elseif ($days -lt 0)
-        {
-            $obj | Add-Member NoteProperty Status("Certificate expired")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-        else 
-        {
-            $obj | Add-Member NoteProperty Status("Certificate not expired")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-    }
-    catch
-    {
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamHelpDeskSslOnly
-{
-# TC-Mbam-0011
-#-----------------
-
-<#
-.Synopsis
-   Checks, if the Mbam webpages for HelpDesk is only reachable on https.
-.DESCRIPTION
-   Checks, if the Mbam webpages for HelpDesk is only reachable on https.
-.OUTPUTS
-   PSCustomObject
-#>
-
-    $server = Get-MbamHostname
-    $helpdesk = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty VirtualDirectory  
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0011")
-    $obj | Add-Member NoteProperty Task("HelpDesk page $server$helpdesk is only reachable over SSL connection") 
-
-    $https = Test-MbamHelpDeskPage -https
-    $http = Test-MbamHelpDeskPage   
-
-    if (($https.Passed -eq "true") -and ($http.Passed -eq "false"))
-    {
-        $obj | Add-Member NoteProperty Status("Only reachable over https")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-    elseif (($https.Passed -eq "true") -and ($http.Passed -eq "true"))
-    {
-        $obj | Add-Member NoteProperty Status("Reachable over https and http")
-        $obj | Add-Member NoteProperty Passed("warning")
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("Not reachable at all")
-        $obj | Add-Member NoteProperty Passed("false")
-    }
-        
-    Write-Output $obj
-}
-
-function Test-MbamSelfServiceSslOnly
-{
-# TC-Mbam-0012
-#-----------------
-
-<#
-.Synopsis
-   Checks, if the Mbam webpages for SelfService is only reachable on https.
-.DESCRIPTION
-   Checks, if the Mbam webpages for SelfService is only reachable on https.
-.OUTPUTS
-   PSCustomObject
-#>
-
-    $server = Get-MbamHostname
-    $selfservice = Get-MbamWebApplication -SelfServicePortal | select -ExpandProperty VirtualDirectory  
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0012")
-    $obj | Add-Member NoteProperty Task("SelfService page $server$selfservice is only reachable over SSL connection") 
-
-    $https = Test-MbamSelfServicePage -https
-    $http = Test-MbamSelfServicePage
-        
-
-    if (($https.Passed -eq "true") -and ($http.Passed -eq "false"))
-    {
-        $obj | Add-Member NoteProperty Status("Only reachable over https")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-    elseif (($https.Passed -eq "true") -and ($http.Passed -eq "true"))
-    {
-        $obj | Add-Member NoteProperty Status("Reachable over https and http")
-        $obj | Add-Member NoteProperty Passed("warning")
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("Not reachable at all")
-        $obj | Add-Member NoteProperty Passed("false")
-    }
-        
-    Write-Output $obj
-}
-
-function Test-MbamCertificateThumbprint
-{
-# TC-Mbam-0010
-#-----------------
-
-    [CmdletBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [string]$thumbprint
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0010")
-    $obj | Add-Member NoteProperty Task("Mbam certificate thumbprint is valid") 
-
-    # get the actual thumbprint of MBAM
-    $actualThumbprint = Get-MbamWebApplication -AdministrationPortal | select -ExpandProperty CertificateThumbprint
-
-    # do the thumbprints match?
-    if($actualThumbprint -eq $thumbprint)
-    {
-        $obj | Add-Member NoteProperty Status("Thumbprint is valid")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("Thumbprint is not valid")
-        $obj | Add-Member NoteProperty Passed("false")
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamCertificateValidationState
-{
-# TC-Mbam-0033
-#-------------
-
-<#
-.Synopsis
-   Verifies that the certificate of the web page is valid.
-.DESCRIPTION
-   Verifies that the certificate of the web page is valid. 
-   This is done by checking the revoke status of the certificate and if DNS name in certificate matches the Mbam hostname.
-.OUTPUTS
-   PSCustomObject
-#>
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0033")
-    $obj | Add-Member NoteProperty Task("Mbam certificate is valid") 
-
-    $location = Get-Location
-
-    try 
-    {
-        # Get Mbam application object
-        $mbamApp = Get-MbamWebApplication -AdministrationPortal
-
-        # Get a certificate object of correspondingly thumbprint
-        Set-Location Cert:\
-        $certificate = dir -Recurse | where Thumbprint -EQ $mbamApp.CertificateThumbprint
-
-        # Check validation of certificate
-        if(Test-Certificate -DNSName $mbamApp.Hostname -cert $certificate -ErrorAction Stop)
-        {
-            $obj | Add-Member NoteProperty Status("Certificate is valid")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("Certificate not valid")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-
-            
-    }
-    catch
+    if ($errCounter -gt 0) 
     { 
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # Create error message
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-
-        # Check for specific error messages
-        # Certificate is revoked 
-        if($msg -like "*CRYPT_E_REVOKED*")
-        {
-            $obj | Add-Member NoteProperty Status("Certificate revoked")
-        }
-        # DNS name of certificate does not match the hostname
-        elseif ($msg -like "*CERT_E_CN_NO_MATCH*")
-        {
-            $obj | Add-Member NoteProperty Status("CN-Name of certificate does not match")
-        }
-        # all other errors
-        else
-        {
-            $obj | Add-Member NoteProperty Status("An error occurred, see logfile for more infos")
-        }
-
-        # log error
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+        $header = "<h3 id=`"$anchor`" class=`"failed`">$headertext (Errors: $errCounter)</h3>" 
     }
-
-    Set-Location $location
-    Write-Output $obj
-}
-
-function Test-MbamServerRestartedAfterUpdate
-{
-# TC-MBAM-0023
-#-------------
-
-<#
-.Synopsis
-    Checks, if the MBAM-Server was restarted after the last system update installation.
-.DESCRIPTION
-    Checks, if the MBAM-Server was restarted after the last system update installation.
-.OUTPUTS
-    PSCustomObject
-#>
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0023")
-
-    $lastUpdateTimes = Get-LastSoftwareUpdateTimes
-    $obj | Add-Member NoteProperty Task("Server restarted after last system update ("+$lastUpdateTimes[0].Title+")") 
-    
-    if (Get-PendingReboot)
-    {      
-        $obj | Add-Member NoteProperty Status("Reboot pending")
-        $obj | Add-Member NoteProperty Passed("false")
-    }
-    else
+    elseif ($warnCounter -gt 0)
     {
-        $lastSystemStartupTime = Get-SystemStartupTime
-
-        if ($lastUpdateTimes -ne $null)
-        {
-            if($lastUpdateTimes[0].InstalledOn -lt $lastSystemStartupTime)
-            {
-                $obj | Add-Member NoteProperty Status("System restarted")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("'Restart not necessary")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("No update found")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
+        $header = "<h3 id=`"$anchor`" class=`"warning`">$headertext (Warnings: $warnCounter)</h3>"
     }
     
-    Write-Output $obj  
+    Write-Output $header   
 }
 
-function Test-MbamASP_NetMVC4
+function New-MBAMReportNavPoint
 {
-# TC-Mbam-0022
-#-------------
-
 <#
 .Synopsis
-    Checks, if ASP.net MVC 4 is installed on the MBAM-Server.
-.DESCRIPTION
-    Checks, if ASP.net MVC 4 is installed on the MBAM-Server.
-.OUTPUTS
-    PSCustomObject
-#>
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0022")
-    $obj | Add-Member NoteProperty Task("ASP.NET MVC 4 Runtime installed") 
-
-    try
-    {
-        if (Get-Wmiobject Win32_Product | where name -EQ "Microsoft ASP.NET MVC 4 Runtime")
-        {
-            $obj | Add-Member NoteProperty Status("Installed")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("Not installed")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occured, see log file for info.")
-        $obj | Add-Member NoteProperty Passed("false")
-            
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-#
-# Client Test
-#~~~~~~~~~~~~~~~~
-
-function Test-MbamClientAgentVersion 
-{
-# TC-Mbam-0030
-#-------------
-
-<#
-.Synopsis
-   Checks Mbam-Agent version
-.DESCRIPTION
-   Checks the Mbam-Agent version of a client
-.INPUTS
-   Name of the client in domain; without localhost is used
-.OUTPUTS
-   System.String The actual versionnumber of the installed Mbam-Agent version as string
-.NOTES
-   WinRM has to be activated on the remote machine to Get a version number of a remote client
-#>
     
-    [CmdletBinding()]
-    Param
-    (
-        [Parameter(Mandatory=$true)]
-        [Alias('ClientAgentVersion')]
-        [string]$version  
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0030")
-    $obj | Add-Member NoteProperty Task("The Mbam-Agent version on client is up to date")
-
-
-    $currentVersion = Get-MbamClientAgentVersion
-
-    if ($version -eq $currentVersion)
-    {
-        $obj | Add-Member NoteProperty Status("Version correct, installed version is $currentVersion")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-    elseif($currentVersion -eq "0")
-    {
-        $obj | Add-Member NoteProperty Status("No client agent found.")
-        $obj | Add-Member NoteProperty Passed("false")    
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("Versions differ, installed version is $currentVersion")
-        $obj | Add-Member NoteProperty Passed("warning")
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamOSDiskProtectionStatus
-{
-# TC-Mbam-0025
-#-------------
-
-<#
-.Synopsis
-   Checks the protection status of the operating system hard disk drive
 .DESCRIPTION
-   Checks the protection status of the operating system hard disk drive. Protection status is ok if drive is encrypted and 
-   protection is on. The mountpoint of this drive is assumed to be c:\
-#>    
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0025")
-    $obj | Add-Member NoteProperty Task("The operating system drive is encrypted and protection is on")
-
-    try 
-    {
-        if (get-Module -Name BitLocker)
-        {
-            $volume = Get-BitLockerVolume -MountPoint "C:" 
-
-            if ($volume.ProtectionStatus -eq "On") 
-            {
-                $obj | Add-Member NoteProperty Status("Protected and encrypted")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            elseif (($volume.ProtectionStatus -eq "Off") -and ($volume.VolumeStatus -eq "FullyEncrypted"))
-            {
-                $obj | Add-Member NoteProperty Status("Encrypted but protection is off")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Not protected")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-        }
-        else
-        {
-            $volume = get-wmiobject -namespace root\CIMv2\Security\MicrosoftVolumeEncryption -class  Win32_EncryptableVolume -filter "DriveLetter = `"$env:SystemDrive`""
-
-            if ($volume.getProtectionStatus().ProtectionStatus -eq 1)
-            {
-                $obj | Add-Member NoteProperty Status("Protected and encrypted")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            elseif (($volume.getProtectionStatus().ProtectionStatus -eq 0) -and ($volume.getConversionStatus().encryptionPercentage -eq 100))
-            {
-                $obj | Add-Member NoteProperty Status("Encrypted but protection is off")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Not protected")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-        }
-    }
-    catch 
-    {
-        $obj | Add-Member NoteProperty Status("An error occurred, see logfile for more info.")
-        $obj | Add-Member NoteProperty Passed("false")
+    
+#>
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    $resultObjects,
         
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
+    [Parameter(Mandatory=$true)]
+    [string]$navPointText,
+        
+    [Parameter(Mandatory=$true)]
+    [string]$anchor 
+)
 
-    Write-Output $obj
-}
+    $navPoint = "<li><a href=`"#$anchor`">$navPointText <span  class=`"green`">OK</span></a></li>"
+    $errCounter, $warnCounter = 0, 0
 
-function Test-MbamDriveProtectionStatus
-{
-# TC-Mbam-0026
-#-------------
-
-<#
-.Synopsis 
-   Checks the protection status of all local drives.
-.DESCRIPTION
-   Checks the protection status of all fixed and removable drives. Rom drives like CD oder DVD are not included. 
-   Protection status is ok if drive is encrypted and protection is on.
-.OUTPUTS
-    One protection status per given mounting point entry
-.EXAMPLE
-    Test-MbamDriveProtectionStatus
-#>    
-
-    try 
+    foreach($obj in $resultObjects)
     {
-        if (get-Module -Name BitLocker)
-        {
-        $mountPoints = Get-Volume | Where {($_.DriveType -like "Fixed") -OR ($_.DriveType -like "Removable")} 
-        $i = 1
-
-        foreach($mountPoint in $mountPoints)
-        {
-            $obj = New-Object PSObject
-            $obj | Add-Member NoteProperty Name("TC-Mbam-0026.$i")
-            $obj | Add-Member NoteProperty Task("The "+$mountPoint.DriveType+" Drive "+$mountPoint.DriveLetter+" is encrypted and protection is on")
-
-            $volume = Get-BitLockerVolume -MountPoint $mountPoint.DriveLetter 
-
-            if (($volume.ProtectionStatus -eq "On") -and ($volume.VolumeStatus -eq "FullyEncrypted"))
-            {
-            $obj | Add-Member NoteProperty Status("Protected and encrypted")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-            elseif (($volume.ProtectionStatus -eq "Off") -and ($volume.VolumeStatus -eq "FullyEncrypted"))
-            {
-            $obj | Add-Member NoteProperty Status("Encrypted but protection is off")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-            else
-            {
-            $obj | Add-Member NoteProperty Status("Not protected")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-
-            $i++
-
-            Write-Output $obj
-        } 
-        }
-    }
-    catch 
+        if ( ($obj.passed -eq 2) -or ($obj.passed -eq 4) ) { $errCounter++ }
+        if ($obj.passed -eq 3) { $warnCounter++ }
+    } 
+    
+    if ($errCounter -gt 0) 
     { 
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+        $navPoint = "<li><a href=`"#$anchor`">$navPointText <span class=`"red`">$errCounter</span></a></li>" 
     }
-}
-
-function Test-MbamClientSoftwareState
-{
-# TC-Mbam-0029
-#-------------
-
-<#
-.Synopsis 
-   Checks if the MDOP Mbam client software package is installed 
-.DESCRIPTION
-   Checks if the MDOP Mbam client software package is installed 
-#> 
-
-    try 
+    elseif ($warnCounter -gt 0)
     {
-        $mbam = Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\* | where DisplayName -eq "MDOP MBAM"
-
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0029")
-        $obj | Add-Member NoteProperty Task("Status of MDOP MBAM software package")
-            
-        if(!($mbam -eq $null))
-        {
-            $obj | Add-Member NoteProperty Status("Installed")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("MDOP MBAM Software not found")
-            $obj | Add-Member NoteProperty Passed("false")
-        } 
+        $navPoint = "<li><a href=`"#$anchor`">$navPointText <span class=`"orange`">$warnCounter</span></a></li>"
     }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occurred, see logfile for more infos.")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamClientAgentServiceState
-{
-# TC-Mbam-0029
-#-------------
-
-<#
-.Synopsis 
-   Checks the Mbam client agent status 
-.DESCRIPTION
-   Checks the Mbam client agent status
-#> 
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0029")
-    $obj | Add-Member NoteProperty Task("Status of BitLocker Management Client-Service")
-            
-    try 
-    {
-        $agent = Get-service -Name MBAMAgent -ErrorAction Stop
-
-            
-        if($agent.Status -eq "Running")
-        {
-            $obj | Add-Member NoteProperty Status($agent.Status.ToString())
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status($agent.Status.ToString())
-            $obj | Add-Member NoteProperty Passed("false")
-        } 
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("Service not found")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamTPMStatus
-{
-# TC-Mbam-0036
-#-------------
-
-<#
-.Synopsis 
-   Checks the TPM status 
-.DESCRIPTION
-   Checks the TPM status, more specifically if the TPM is present and ready.
-#>
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0036")
-    $obj | Add-Member NoteProperty Task("Status of TPM")
-    try
-    {
-        $tpm = Get-TpmObject
-
-        if ($tpm.IsActivated_InitialValue -and $tpm.IsEnabled_InitialValue)
-        {
-            $obj | Add-Member NoteProperty Status("TPM present and ready")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        elseif ($tpm.IsActivated_InitialValue -and !$tpm.IsEnabled_InitialValue)
-        {
-            $obj | Add-Member NoteProperty Status("TPM present but not ready")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("TPM not present")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occurred, see logfile for more infos.")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamGpos
-{
-# TC-Mbam-0027
-#-------------
-
-    [CmdletBinding()]
-    Param(
-        [string]$source = "gpo.xml"
-    )
-
-    Try
-    {
-        [xml]$xml = Get-Content $source -ErrorAction Stop
-
-
-        foreach($policy in $xml.GPO.Policy)
-        {
-            if($policy.PolicyState -eq 'enabled')
-            {
-                $obj = New-Object PSObject
-                $obj | Add-Member NoteProperty Name("TC-Mbam-0027."+$policy.PolicyID)
-                $obj | Add-Member NoteProperty Task("GPO: "+$policy.PolicyName)
-
-
-                try 
-                {
-                    if (Get-MbamGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop)
-                    {
-                        $obj | Add-Member NoteProperty Status("Policy correct and applied")
-                        $obj | Add-Member NoteProperty Passed("true")
-                    }
-                    else
-                    {                   
-                        $obj | Add-Member NoteProperty Status("Policy value not correct")
-                        $obj | Add-Member NoteProperty Passed("warning")
-                    }
-                }
-                catch
-                {
-                    $obj | Add-Member NoteProperty Status("Policy not applied")
-                    $obj | Add-Member NoteProperty Passed("false")
-                }            
-                
-                Write-Output $obj
-                $i++
-            }
-        }
-    }
-    catch 
-    {
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty Name("TC-Mbam-0027")
-        $obj | Add-Member NoteProperty Task("GPOs are correct")
-        $obj | Add-Member NoteProperty Status("Reference source gpo.xml or equivalent not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        Write-Output $obj
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }    
-}
-
-function Test-MbamTpmOwnerShip
-{
-# TC-Mbam-0037
-#-------------
-
-    $tpm = Get-TpmObject
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0037")
-    $obj | Add-Member NoteProperty Task("TPM chip is owned by operating system")
-
-    if($tpm -ne $null)
-    {
-        if($Tpm.IsOwned().isOwned)
-        {
-            $obj | Add-Member NoteProperty Status("TPM is owned")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("TPM not owned")
-            $obj | Add-Member NoteProperty Passed("false")
-        }
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("TPM not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        # log error
-        $msg = "No TPM chip found."
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamTpmVersion
-{
-# TC-Mbam-0041
-#-------------
-
-    [CmdletBinding()]
-    Param(
-        [single]$version = 1.2
-    )
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0041")
-    $obj | Add-Member NoteProperty Task("TPM chip version is at least $version")
-
-    $tpm = Get-TpmObject
-
-    if($tpm -ne $null)
-    {
-        $tpmversion = [single]$tpm.SpecVersion.Substring(0,$tpm.SpecVersion.IndexOf(','))
-        
-        if($tpmversion -ge $version)
-        {
-            $obj | Add-Member NoteProperty Status("TPM version is $tpmversion")
-            $obj | Add-Member NoteProperty Passed("true")
-        }
-        else
-        {
-            $obj | Add-Member NoteProperty Status("TPM version is $tpmversion")
-            $obj | Add-Member NoteProperty Passed("false")
-        }  
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("TPM not found")
-        $obj | Add-Member NoteProperty Passed("false")
-        # log error
-        $msg = "No TPM chip found."
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
-}
-
-function Test-MbamClient2ServerKeyReporting
-{
-# TC-Mbam-0031 (TC-Mbam-0031.1)
-#-------------
-
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0031.1")
-    $obj | Add-Member NoteProperty Task("Client escrowed key to MBAM server")
-
-    try 
-    {
-        $keyEscrowedTime = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam/operational";ID=29} -MaxEvents 1 -ErrorAction Stop | select -ExpandProperty TimeCreated
     
-        $reportFrequency = Get-item 'HKLM:\SOFTWARE\Policies\Microsoft\FVE\MDOPBitLockerManagement' -ErrorAction Stop | Get-ItemProperty | select -ExpandProperty "clientWakeupFrequency"
-
-        $lastStartup = Get-SystemStartupTime
-        
-        $time = (Get-Date).AddMinutes(-$reportFrequency)
-
-            
-        if ($lastStartup -gt $time)
-        {
-            if($keyEscrowedTime -gt $time)
-            {
-                $obj | Add-Member NoteProperty Status("Key escrowed at $keyEscrowedTime")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Last system startup within report frequency, key not escrowed yet")
-                $obj | Add-Member NoteProperty Passed("warning")
-            }
-        }
-        else
-        {
-            if($keyEscrowedTime -gt $time)
-            {
-                $obj | Add-Member NoteProperty Status("Key escrowed at $keyEscrowedTime")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("No key escrowed within regular frequency")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occurred, see log file for more info.")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
+    Write-Output $navPoint  
 }
 
-function Test-MbamClient2ServerStatusReporting
+function Get-PSVersionAsHtmlTable
 {
-# TC-Mbam-0031 (TC-Mbam-0031.2)
-#-------------
+[CmdletBinding()]
+Param(
+    [string]$cssClass
+)
+    if (($null -eq $cssClass) -or ($cssClass -eq "")) { $result = "<table>" }
+    else { $result ="<table class=`'$cssClass`'>" }
+    $result += "<tr><td>PowerShell Version</td><td>$($PSVersionTable.PSVersion.ToString())</td></tr>"
+    $result += "<tr><td>PowerShell Edition</td><td>$($PSVersionTable.PSEdition.ToString())</td></tr>"
+    $result += "<tr><td>Build Version</td><td>$($PSVersionTable.BuildVersion.ToString())</td></tr>"
+    $result += "<tr><td>CLR Version</td><td>$($PSVersionTable.CLRVersion.ToString())</td></tr>"
+    $result += "<tr><td>WS Man Stack Version</td><td>$($PSVersionTable.WSManStackVersion.ToString())</td></tr>"
+    $result += "<tr><td>PowerShell Remoting Protocol Version</td><td>$($PSVersionTable.PSRemotingProtocolVersion.ToString())</td></tr>"
+    $result += "<tr><td>Serialization Version</td><td>$($PSVersionTable.SerializationVersion.ToString())</td></tr>"
+    $result += "</table>"
 
-    $obj = New-Object PSObject
-    $obj | Add-Member NoteProperty Name("TC-Mbam-0031.2")
-    $obj | Add-Member NoteProperty Task("Client reported status to MBAM server")
-
-    try 
-    {
-        $statusReportingTime = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-Mbam/operational";ID=3} -MaxEvents 1 -ErrorAction Stop | select -ExpandProperty TimeCreated
-    
-        $statusReportingFrequency = Get-item 'HKLM:\SOFTWARE\Policies\Microsoft\FVE\MDOPBitLockerManagement' -ErrorAction Stop | Get-ItemProperty | select -ExpandProperty "StatusReportingFrequency"
-        
-        $lastStartup = Get-SystemStartupTime
-        
-        $time = (Get-Date).AddMinutes(-$statusReportingFrequency)
-
-        if ($lastStartup -gt $time)
-        {
-            if($statusReportingTime -gt $time)
-            {
-                $obj | Add-Member NoteProperty Status("Status reported at $statusReportingTime")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("Last system startup within report frequency, status not reported yet")
-                $obj | Add-Member NoteProperty Passed("warning")
-            }
-        }
-        else
-        {
-            if($statusReportingTime -gt $time)
-            {
-                $obj | Add-Member NoteProperty Status("Status reported at $statusReportingTime")
-                $obj | Add-Member NoteProperty Passed("true")
-            }
-            else
-            {
-                $obj | Add-Member NoteProperty Status("No status reported within regular frequency")
-                $obj | Add-Member NoteProperty Passed("false")
-            }
-        }
-    }
-    catch
-    {
-        $obj | Add-Member NoteProperty Status("An error occurred, see log file for more info.")
-        $obj | Add-Member NoteProperty Passed("false")
-
-        # log error
-        $msg = $_.Exception.toString()
-        $msg += "; " + $_.ScriptStackTrace.toString()
-        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-    }
-
-    Write-Output $obj
+    Write-Output $result
 }
 
-function Test-BitlockerDriverVersion
-{
-# TC-Mbam-0049
-#-------------
-
-<#
-.Synopsis 
-    Checks, if the BitLocker driver version is up to date.
-.DESCRIPTION
-    Checks, if the BitLocker driver version is up to date. At the moment this test only works for Windows 7 SP1 , 8.1 and 10.
-#>
-
-try
-{
-    #$fileVersion = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo("c:\windows\system32\drivers\fvevol.sys").ProductVersion).replace(".","")
-    $file = Get-Item C:\Windows\System32\drivers\fvevol.sys 
-    $fileVersion = -join($file.VersionInfo.ProductMajorPart,$file.VersionInfo.ProductMinorPart,$file.VersionInfo.ProductBuildPart,$file.VersionInfo.ProductPrivatePart)
-    $osVersion = Get-CimInstance Win32_OperatingSystem | select -ExpandProperty Version
-}
-catch
-{
-    # log error
-    $msg = $_.Exception.toString()
-    $msg += "; " + $_.ScriptStackTrace.toString()
-    write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-}
-
-switch ($osVersion)
-{
-    "6.1.7601" { $expectedFileVersion = "61760123003"; break } # Windows 7
-    "6.3.9600" { $expectedFileVersion = "63960017031"; break } 
-    "10.0.14393" { $expectedFileversion = "100143930"; break } # Windows 10 
-    "10.0.15063" { $expectedFileVersion = "10015063502"; break } # Windows 10 Creators Update
-    default { $expectedFileVersion = "0"; break }
-}
-
-# Create the test result object
-$obj = New-Object PSObject
-$obj | Add-Member NoteProperty Name("TC-Mbam-0049")
-$obj | Add-Member NoteProperty Task("The BitLocker driver version is correct.")
-
-# Driver version matches
-if ($expectedFileVersion -eq $fileVersion)
-{
-    $obj | Add-Member NoteProperty Status("Driver is up to date.")
-    $obj | Add-Member NoteProperty Passed("true")
-}
-
-# Operating system not in the list
-elseif ($expectedFileVersion -eq 0)
-{
-    $obj | Add-Member NoteProperty Status("Operating system not in list.")
-    $obj | Add-Member NoteProperty Passed("false")
-}
-
-# A newer driver version is available
-elseif ($expectedFileVersion -gt $fileVersion)
-{
-    $obj | Add-Member NoteProperty Status("Driver version is older than expected.")
-    $obj | Add-Member NoteProperty Passed("warning")
-}
-
-# A driver version with a higher version number is already installed (
-elseif ($expectedFileVersion -lt $fileVersion)
-{
-    $obj | Add-Member NoteProperty Status("Driver version is higher than expected.")
-    $obj | Add-Member NoteProperty Passed("warning")
-}
-
-Write-Output $obj
-}
+#endregion
 
 
-function Test-TPMFirmwareVul 
-{
-# TC-Mbam-0050
-#-------------
-
-<#
-.Synopsis 
-    Checks, if the TPM is vulnerable for security advisory ADV170012
-.DESCRIPTION
-    Checks, if the TPM is vulnerable for security advisory ADV170012. See https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/ADV170012 for 
-    further information.
-.LINK https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/ADV170012
-#>
-
-#TODO: testen, ob entsprechendes Update installiert ist
-
-try
-{
-    # Get first event which indicates vulnerability
-    $vulEvent = Get-EventLog -LogName System | where {($_.eventID -eq 1794) -and ($_.Source -eq "TPM-WMI")} | select -First 1  -ErrorAction Stop  
-}
-catch
-{
-    # log error
-    $msg = $_.Exception.toString()
-    $msg += "; " + $_.ScriptStackTrace.toString()
-    write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
-}
-
-# Create the test result object
-$obj = New-Object PSObject
-$obj | Add-Member NoteProperty Name("TC-Mbam-0050")
-$obj | Add-Member NoteProperty Task("ADV170012 | Vulnerability in TPM could allow Security Feature Bypass.")
-
-# No event found
-if ($vulEvent -eq $null)
-{
-    $obj | Add-Member NoteProperty Status("TPM not vulnerable")
-    $obj | Add-Member NoteProperty Passed("true")
-}
-# Event found, we have to check if it is an old entry or if it was logged after the last system boot up time
-else
-{
-    $lastboot = Get-CimInstance -ClassName win32_operatingsystem | select lastbootuptime
-
-    if ($lastboot.lastbootuptime -lt $vulEvent.TimeGenerated)
-    {
-        $obj | Add-Member NoteProperty Status("TPM vulnerable, found event 1794")
-        $obj | Add-Member NoteProperty Passed("false")
-    }
-    else
-    {
-        $obj | Add-Member NoteProperty Status("TPM not vulnerable")
-        $obj | Add-Member NoteProperty Passed("true")
-    }
-}
-
-Write-Output $obj
-}
+#endregion
 
 
 

@@ -29,9 +29,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly | dennis.esly@fb-pro.com
     Date:             05/25/2018
-    Last change:      05/25/2018
-    Version:          0.1
-    State:            Draft
+    Last change:      08/17/2018
+    Version:          1.0
+    State:            Approved
 #>
 
 <# 
@@ -41,18 +41,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Using module TapResultClass
 
-Import-Module ..\LogFileModule\LogFileModule.psm1 -ErrorAction SilentlyContinue
+#region Imports
+Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
-$ConfigFile = Import-LocalizedData -FileName Settings.psd1
+$winSrvExtensionModulePath = (Get-Module -ListAvailable WinSrvExtensionModule).Path
+$baseDir = (Get-Item $winSrvExtensionModulePath).Directory.Parent.Fullname+"\Settings"
+Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
 
+#endregion
 
+#region Logfile settings
 # Set the path and name of standard log file to path and name configured in settings
 $LogPath = $ConfigFile.Settings.LogFilePath
 $LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
+#endregion
 
-
-# Table of content
+#region Table of content
 # ================
 #
 # 1 .........Test-functions 
@@ -64,10 +69,10 @@ $LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
 # 2 .........Helper functions
 #
 # ---------------------------------------------------------
+#endregion
 
 
-
-# 1 Test functions
+#region 1 Test functions
 # ----------------
 #
 # Section for all Test-functions inside this module.
@@ -75,7 +80,7 @@ $LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
 ############################################################## 
 
 
-# 1.1 Public test-functions
+#region 1.1 Public test-functions
 # ---------------------
 #
 # Section for test-functions representing a test case
@@ -415,18 +420,355 @@ Param(
     Write-Output $obj  
 }
 
+function Test-LocalAdmins
+{
+<#
+.Synopsis
+    Tests if the members of the local admin group matches the list of members in the file.
+.DESCRIPTION
+    Tests if the members of the local admin group matches the list of members in the file.
+.PARAMETER knownAdmins
+    A list of SamAccountNames of members which are assumed to be in the local admin group. Use new-LocalAdminsFile.ps1 in module directory to initally create a snapshot
+    of local admin group.
+.PARAMETER moduleID
+    The optional moduleID if the test is called by another TAP module
+.NOTES
+    ID  FBP-WinSrv-0005
+#>
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [Alias('LocalAdminGroupMembers')]
+    [string[]] $knownAdmins,
 
-# 1.2 Private test-functions
+    [String]$moduleId
+)
+
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-WinSrv-0005]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: $moduleID"
+
+    $obj = [TapResult]::New("FBP-WinSrv-0005", "$moduleId", "Members in local admin group are correct") 
+
+
+    $admins = Get-LocalAdmins
+
+    if (-not($null -eq $admins) -and -not($null -eq $knownAdmins))
+    {
+        $compare = Compare-Object -ReferenceObject $admins -DifferenceObject $knownAdmins
+
+        $nl = [System.Environment]::NewLine
+
+        foreach($member in $compare) 
+        {  
+            if ($member.SideIndicator -eq "<=")
+            {
+                $unexpected += $member.InputObject + $nl
+                $unexpectedCounter++
+            }
+            elseif ($member.SideIndicator -eq "=>")
+            {
+                $missing += $member.InputObject + $nl
+                $missingCounter++
+            }
+        }
+
+        if ($missing -and $unexpected)    
+        {
+            $obj.Status = "Not listed members found ($unexpectedCounter): $nl $unexpected $nl Missing members($missingCounter): $nl $missing"
+            $obj.Passed = 2
+            Write-LogFile -Path $LogPath -name $LogName -message "Local admins - not listed members found: $unexpected $nl Missing members: $missing" -Level Error
+        }
+        elseif ($unexpected) 
+        {
+            $obj.Status = "Not listed members found($unexpectedCounter): $nl $unexpected"
+            $obj.Passed = 2
+            Write-LogFile -Path $LogPath -name $LogName -message "Local admins - not listed members found: $unexpected" -Level Error   
+        }
+        elseif ($missing)
+        {
+            $obj.Status = "Missing members($missingCounter): $nl $missing"
+            $obj.Passed = 3
+            Write-LogFile -Path $LogPath -name $LogName -message "Local admins - missing members: $missing" -Level Warning
+        }
+        else 
+        {
+            $obj.Status = "All correct"
+            $obj.Passed = 1
+        }
+    }
+    else
+    {
+        $obj.Status = "An error occured while checking."
+        $obj.Passed = 4
+        Write-LogFile -Path $LogPath -name $LogName -message "An error occured. Either local admins could not be received or file knownLocalAdmins.txt is empty/could not be read"
+    }
+
+    Write-Output $obj
+}
+
+function Test-WinSrvSccmClientUpdates
+{
+<#
+.Synopsis
+    Tests if deployed and applicable updates are installed.
+.DESCRIPTION
+     Tests if deployed and applicable updates are installed. If updates are available a warning is returned with a list of applicable updates in the status property of the object.
+.PARAMETER moduleID
+    The optional moduleID if the test is called by another TAP module
+.NOTES
+    ID  FBP-WinSrv-0006 
+#>
+[CmdletBinding()]
+Param(
+    [String]$moduleId
+)
+
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-WinSrv-0006" + [System.Environment]::NewLine
+    $messageBag += "Module ID: $moduleID"
+
+    $obj = [TapResult]::New("FBP-WinSrv-0006", "$moduleId", "All applicable updates via SCCM are installed.") 
+
+    try 
+    {
+        $SCCMUpdates = Get-CimInstance -Namespace 'root\ccm\ClientSDK' -ClassName 'CCM_SoftwareUpdate' -ErrorAction Stop
+
+        if ($null -eq $SCCMUpdates)
+        {
+            # No updates applicable
+            $obj.Status = "No updates appliable"
+            $obj. Passed = 1
+        }
+        else
+        {
+            $nl = [System.Environment]::NewLine
+            $index = 1
+
+            foreach($update in $SCCMUpdates)
+            {
+                $status += ($index++).ToString() + ": " + ($update.Name).Substring(0, [System.Math]::Min(75, $update.Name.Length)) + "..."
+                $status += $nl + "KB" + $update.ArticleID  + $nl + $nl
+                                
+            }
+
+            # Updates applicable
+            $obj.Status = "The following updates are applicable" + $nl + $status
+            $obj.Passed = 3
+
+            # Also log applicable updates in logfile
+            Write-LogFile -Path $LogPath -name $LogName -message $status -Level Warning
+        }
+    }
+    catch
+    {
+        $obj.Status = "SCCM client not installed."
+        $obj.Passed = 1
+        Write-LogFile -Path $LogPath -name $LogName -message "CCM class not found. SCCM client not installed?" -Level Error
+    }    
+
+    Write-Output $obj
+}
+
+function Test-LastUserLogins
+{
+<#
+.Synopsis
+   Checks, if only expected users have logged in on the server.
+.DESCRIPTION
+   Checks, if only expected users have logged in on the server.
+.PARAMETER acceptedUsers
+    Users which are allowed to login
+.PARAMETER moduleID
+    The optional moduleID if the test is called by another TAP module
+.NOTES
+    ID  FBP-WinSrv-0007
+#>
+[CmdletBinding()]
+Param(
+    [string[]]$acceptedUsers,
+
+    [String]$moduleId
+)
+    
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-WinSrv-0007]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: $moduleID"
+
+    $obj = [TapResult]::New("FBP-WinSrv-0007", "$moduleId", "Only expected logins within last 24h on machine") 
+
+    $logins = Get-UserLogins
+
+    # Check, if we have any login
+    if ($null -ne $logins)
+    {
+        # Compare logged in usernames with the amount of accepted users to get only the users who are not accepted
+        $compare = Compare-Object -ReferenceObject $logins.caption -DifferenceObject $acceptedUsers
+
+        $nl = [System.Environment]::NewLine
+
+        foreach($user in $compare.InputObject)
+        {
+            foreach($login in $logins)
+            {
+                if ($user -eq $login.caption)
+                {
+                    $unexpected += $login.caption + " | " + $login.lastlogin + $nl
+                    break
+                }
+            }
+        }
+    }
+
+    if ($unexpected) 
+    {
+        $obj.Status = "Unexpected logins found: $nl $unexpected"
+        $obj.Passed = 3
+        Write-LogFile -Path $LogPath -name $LogName -message "Unexpected logins found: $unexpected" -Level Warning   
+    }
+    else 
+    {
+        $obj.Status = "No unexpected logins found"
+        $obj.Passed = 1
+    }
+
+    Write-Output $obj
+}
+
+function Test-WinSrvMaintenanceModeOn
+{
+<#
+.Synopsis
+   Checks, if maintenance mode is on for server.
+.DESCRIPTION
+   Checks, if maintenance mode is on for server.
+.PARAMETERS pathToLogFile
+    Filepath to the MMTool log file
+.PARAMETER moduleID
+    The optional moduleID if the test is called by another TAP module
+.NOTES
+    ID  FBP-WinSrv-0008
+#>
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$pathToLogFile,
+
+    [String]$moduleId
+    )
+
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-WinSrv-0008]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: $moduleID"
+
+    $obj = [TapResult]::New("FBP-WinSrv-0008", "$moduleId", "Maintenance mode for server is off") 
+
+
+    if ((Get-MaintenanceMode $pathToLogFile) -eq $false)
+    {
+        $obj.Status = "Maintenance mode OFF"
+        $obj. Passed = 1   
+    }
+    else 
+    {
+        $obj.Status = "Maintenance mode ON"
+        $obj.Passed = 3
+        Write-LogFile -Path $LogPath -name $LogName -message "Maintenance mode ON" -Level Warning   
+    }
+
+    Write-Output $obj
+}
+
+function Test-WinSrvFirewallPort443State
+{
+<#
+.Synopsis
+   Checks, if the firewall for IIS rule on port 443 allows inbound traffic.
+.DESCRIPTION
+   Checks, if the firewall for IIS rule on port 443 allows inbound traffic.
+.PARAMETER moduleID
+    The optional moduleID if the test is called by another TAP module
+.NOTES
+    ID  FBP-WinSrv-0009
+#>
+[CmdletBinding()]
+Param(
+    [String]$moduleId
+)     
+     
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
+    
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-WinSrv-0008]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: $moduleID"
+
+    $obj = [TapResult]::New("FBP-WinSrv-0009", "$moduleId", "Port 443 allows inbound traffic to reach the webserver") 
+
+    try
+    {
+        # check firewall rule of port 443 (standard iis rule)
+        $rule = Get-NetFirewallRule | Where-Object -Property name -eq IIS-WebserverRole-HTTPS-In-TCP 
+        
+        if($null -ne $rule)
+        {     
+            if ($rule.Enabled -eq "true")
+            {
+                if ($rule.Action -eq "Allow")
+                {
+                    $obj.Status = "Enabled, Allow"
+                    $obj.Passed = 1
+                }
+                else
+                {
+                    $obj.Status = "Enabled, Block"
+                    $obj.Passed = 2
+                }
+            }
+            else
+            {
+                $obj.Status = "Disabled"
+                $obj.Passed = 1
+            }  
+        }
+        else
+        {
+            # Standard IIS-Webserver rule for port 443 not found
+            $obj.Status = "Not found"
+            $obj.Passed = 1
+        }
+    }
+    catch
+    {
+        $obj.Status = "An error occured, see log file for more info!"
+        $obj.Passed = 4
+        Write-LogFile -Path $LogPath -name $LogName -message $_.Exception -Level Error
+    }
+
+    Write-Output $obj
+}
+
+#endregion
+
+#region 1.2 Private test-functions
 # ---------------------
 #
 # Section for test-functions used in other functions inisde this module.
 # Designated as private but can also be used outside this module
 #=======================================================================
 
+#endregion
 
+#endregion
 
-
-# 2 Helper functions
+#region 2 Helper functions
 # ---------------------
 #
 # Helper functions used in this module
@@ -554,3 +896,360 @@ Param(
     } | Where-Object {$_.User -notlike "DWM-*"}
 
 }
+
+function Get-UserLogins
+{
+[CmdletBinding()]
+Param(
+    [DateTime]$date = (Get-Date).AddDays(-1)
+)
+
+    Get-CimInstance -class Win32_NetworkLoginProfile |Select-Object name, caption, @{Name="lastlogin"; Expression={$_.ConvertToDateTime($_.LastLogon)}} | Where-Object lastlogin -GT $date
+}
+
+function Get-MaintenanceMode
+{
+<#
+.Synopsis
+    Gets maintenance status of host (needs MMTool to be available).
+.DESCRIPTION
+    Gets maintenance status of host. It checks for logfile of MMTool and parses the info inside to decide, if maintenance mode is on ($true)
+    or off ($false).
+    If file is not found because maybe MMTool is not installed, it also returns $false. 
+.OUTPUTS
+    $true if maintenance mode is on, $false otherwise 
+#> 
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$pathToLog
+)
+
+    try
+    {
+        $maintenanceOn = $false
+        
+        # Get content of MMTool logfile
+        $file = Get-Content $pathToLog
+
+        # Get last line number 
+        $lastLine = $file.Count-1
+        # Get actual date and time
+        $now = Get-Date
+
+        # Check if last entry in file is an info about end time of maintenance mode or if maintenance mode is still on till xx:xx:xx
+        if (($file[$lastLine] -like "*Maintenance -> End*") -or ($file[$lastLine] -like "*Maintenance Mode bis*"))
+        {
+            # Get date and time from the string
+            $date = Get-Date($file[$lastLine].Substring($file[$lastLine].Length-19, 19))     
+        }
+        
+        # Check if last entry in file is a entry about a manually ended maintenance mode
+        elseif ($file[$lastLine] -like "*Maintenance*ausgeschaltet*") 
+        { 
+            # Get date and time from the string
+            $date = Get-Date($file[$lastLine-1].Substring($file[$lastLine-1].Length-19, 19))
+        }
+
+        if ($date)
+        {
+            # Check if we are still in maintenance mode or not
+            if ($date -gt $now) { $maintenanceOn = $true }
+        }
+
+        return $maintenanceOn
+    }
+    catch
+    {
+        # log error
+        $msg = $_.Exception.toString()
+        $msg += "; " + $_.ScriptStackTrace.toString()
+        write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+
+        return $false
+    }
+}
+
+function Get-LocalAdmins
+{
+<#
+.Synopsis
+   Gets all users in local group "Administrators".
+.DESCRIPTION
+   Gets all users in local group "Administrators". Local groups inside are not recursively resolved into their users. Groupnames will be placed in result as if they were users.
+   Active Directory groups on the other hand are recursively resolved for other their users and maybe other groups inside.  
+.OUTPUTS
+    SamAccountNames of users
+#>
+
+    $Computer = $env:COMPUTERNAME
+
+    $ADSIComputer = [ADSI]("WinNT://$Computer,computer")
+
+    try 
+    {
+        $group = $ADSIComputer.psbase.children.find('Administrators', 'Group')
+    }
+    catch
+    {
+        try 
+        {
+            $group = $ADSIComputer.psbase.children.find('Administratoren', 'Group')
+        }
+        catch
+        {
+        }
+    }
+
+    $members = $group.psbase.invoke("members")  | ForEach-Object {
+        $_.GetType().InvokeMember("Name",  'GetProperty',  $null,  $_, $null)
+    }
+    $admins = @()
+
+
+    foreach($member in $members)
+    {  
+        try {      
+            # Try if $member is a AD group and get all members of this group including all nested groups      
+            $admins += (Get-ADGroupMember $member -Recursive | Select-Object -ExpandProperty SamAccountName)
+        }
+        catch
+        {
+            # TODO catch unterscheiden nach nicht gefunden oder active directory Fehler
+            # If it is not a AD group, it has to be a local account, so add it (we assume local groups are not used inside the company)
+            $admins += $member
+        }
+    }
+
+    # Remove duplicated accounts und output the unique ones
+    Write-Output $admins | Select-Object -Unique
+}
+
+function Test-WinSrvRestartNescessary
+{
+<#
+.Synopsis
+   Checks, if the server must be restarted within the next X days.
+.DESCRIPTION
+   Checks, if the server must be restarted within the next X days.
+.PARAMETER wihtinDays
+    Optional number of days to check
+#>
+[Cmdletbinding()]
+Param(
+    [int]$withinDays = 7
+)
+
+    $restart = "NO"
+    # If we have a pending reboot, system definitely has to restart
+    if (Get-PendingReboot) { $restart = "YES" }
+
+    # Otherwise check, if there are updates to install within the next $withDays
+    else
+    {
+        try
+        {
+            $date = (Get-Date).AddDays($withinDays)
+            
+            try
+            {
+                Get-CimInstance -Namespace 'root\ccm\ClientSDK' -ClassName 'CCM_SoftwareUpdate' -ErrorAction Stop `
+                | Select-Object -ExpandProperty Deadline `
+                |   ForEach-Object { if ($_.Deadline -le $date) 
+                        { 
+                            $restart = "YES"
+                            #break;
+                        } 
+                    }
+            }
+            catch
+            {
+                $restart = "SCCM client not installed"
+                # log error
+                write-LogFile -Path $LogPath -name $LogName -message "CCM class not found. SCCM client not installed?" -Level Error
+            }
+
+        }
+        catch
+        {
+            $restart = "SCCM client not installed"
+            # log error
+            write-LogFile -Path $LogPath -name $LogName -message "CCm class not found. SCCM client not installed?" -Level Error
+        } 
+    }
+
+    Write-Output $restart
+}
+
+function Get-OperatingSystemInfo
+{
+<#
+.Synopsis
+   Gets a bunch of system information.
+.DESCRIPTION
+   Gets a bunch of system information like free RAM, free disk space, OS version etc.
+#>
+
+    Get-CimInstance Win32_OperatingSystem | Select-Object *
+}
+
+function Get-SystemStartupTime
+{
+<#
+.Synopsis
+   Gets the time of last system start up.
+.DESCRIPTION
+   Looks up for the last system startup by checking the event log for id 6005.
+.EXAMPLE
+   PS C:\Get-SystemStartupTime
+   
+   Freitag, 30. Dezember 2016 09:03:08
+#>
+[CmdletBinding()]
+Param()
+   
+    # Get log record with id 12 of source kernel general and return time
+    Get-WinEvent -FilterHashtable @{Logname='System'; ProviderName='Microsoft-Windows-Kernel-General'; ID=12} -MaxEvents 1 | Select-Object @{label='TimeCreated';expression={$_.TimeCreated.ToString("yyyy-M-d HH:mm:ss")}} -ExpandProperty TimeCreated
+
+}
+
+function Get-UpdateHistory 
+{
+[CmdletBinding()]
+Param(
+    # number of update events
+    [int]$number = 20
+)
+
+    Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-WindowsUpdateClient';Id=19} | Select-Object -Property *,@{Name='UpdateName';Expression={$_.Properties[0].Value}} | Select-Object TimeCreated, UpdateName -First $number
+}
+
+function Get-SccmDeploymentHistory
+{
+    [CmdletBinding()]
+    Param(
+        [int]$number = 20
+    )
+
+    try
+    {
+        Get-CimInstance -Namespace root\ccm\Policy\Machine -ClassName CCM_UpdateCIAssignment -ErrorAction Stop `
+        | Select-Object -Property AssignmentName,EnforcementDeadline,StartTime -First $number `
+        | Sort-Object -Property EnforcementDeadline -Descending `   
+    }
+    catch
+    {
+        # log error 
+        write-LogFile -Path $LogPath -name $LogName -message "CCM_UpdateCIAssignment class not found" -Level Error
+    }
+}
+
+function Get-LastInstalledUpdateGroup
+{
+
+    $InstalledUpdates = Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-WindowsUpdateClient';Id=19} | Select-Object -Property *,@{Name='UpdateName';Expression={$_.Properties[0].Value}} | Select-Object TimeCreated, UpdateName
+    $date = $InstalledUpdates.TimeCreated | Select-Object -First 1
+
+    $LastInstalledUpdates = @()
+
+    foreach($update in $InstalledUpdates)
+    {
+        if ($update.TimeCreated.Date -eq $date.Date)
+        {
+            $LastInstalledUpdates += $update
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    Write-Output $LastInstalledUpdates
+}
+
+function Get-LastInstalledSccmUpdateGroup
+{
+    try
+    {
+        $AssignedUpdateCIs = Get-CimInstance -Namespace root\ccm\Policy\Machine -ClassName CCM_UpdateCIAssignment -ErrorAction Stop | Select-Object -ExpandProperty AssignedCIs | ForEach-Object { ([XML]$_).CI } | Select-Object -Property @{Name='UpdateId';Expression={$_.ID}},DisplayName 
+        $InstalledUpdates = Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-WindowsUpdateClient';Id=19} | Select-Object -Property *,@{Name='UpdateName';Expression={$_.Properties[0].Value}},@{Name='UpdateId';Expression={$_.Properties[1].Value}}
+        
+        $UpdatesAssignedAndInstalled = Compare-Object -ReferenceObject $AssignedUpdateCIs -DifferenceObject $InstalledUpdates -Property UpdateId -IncludeEqual | Where-Object { $_.SideIndicator -eq '==' } | Select-Object -ExpandProperty UpdateId
+        $InstalledUpdates = $InstalledUpdates | Where-Object { $UpdatesAssignedAndInstalled -contains $_.UpdateId } | Select-Object -Property TimeCreated,UpdateName
+
+        $date = $InstalledUpdates.TimeCreated | Select-Object -First 1
+
+        $LastInstalledUpdates = @()
+
+        foreach($update in $InstalledUpdates)
+        {
+        if ($update.TimeCreated.Date -eq $date.Date)
+        {
+            $LastInstalledUpdates += $update
+        }
+        else
+        {
+            break;
+        }
+    }
+
+        Write-Output $LastInstalledUpdates
+    }
+    catch
+    {      
+        write-LogFile -Path $LogPath -name $LogName -message "CCM class not found. SCCM client not installed?" -Level Error
+        Throw "SCCM client not installed"
+    }
+}
+
+function Get-FormattedUpdateInformation
+{
+    $updates = Get-LastInstalledUpdateGroup
+    
+    if ($null -eq $updates)
+    {
+        Write-Output "No updates found"
+    }
+    else
+    {
+        Write-Output $updates[0].TimeCreated
+        Write-Output "<ul>"
+
+        foreach($update in $updates)
+        {
+            Write-Output -InputObject "<li>$($update.UpdateName)</li>"
+        }
+        Write-Output "</ul>"
+    }
+}
+
+function Get-FormattedSccmUpdateInformation
+{
+    try
+    {
+        $updates = Get-LastInstalledSccmUpdateGroup -ErrorAction Stop
+    
+    
+        if ($null -eq $updates)
+        {
+            Write-Output "No updates found"
+        }
+        else
+        {
+            Write-Output $updates[0].TimeCreated"<br/><br/>"
+            Write-Output "<ul>"
+
+            foreach($update in $updates)
+                    {
+            Write-Output "<li>"$($update.UpdateName)"</li>"
+        }
+            Write-Output "</ul>"
+        }
+    }
+    catch
+    {
+        Write-Output "SCCM client not installed"
+    }
+}
+
+#endregion

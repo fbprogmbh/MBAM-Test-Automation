@@ -29,9 +29,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly | dennis.esly@fb-pro.com
     Date:             04/20/2018
-    Last change:      05/03/2018
-    Version:          0.1
-    State:            Draft
+    Last change:      07/16/2018
+    Version:          1.0
+    State:            Tested
 #>
 
 <# 
@@ -41,16 +41,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Using module TapResultClass
 
+#region Imports
 Import-Module ActiveDirectory -ErrorAction SilentlyContinue
-Import-Module ..\LogFileModule\LogFileModule.psm1 -ErrorAction SilentlyContinue
+Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
-$ConfigFile = Import-LocalizedData -FileName Settings.psd1
+$adExtensionModulePath = (Get-Module -ListAvailable ADExtensionModule).Path
+$baseDir = (Get-Item $adExtensionModulePath).Directory.Parent.Fullname+"\Settings"
+Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+#endregion
 
-
+#region Log configuration
 # Set the path and name of standard log file to path and name configured in settings
 $LogPath = $ConfigFile.Settings.LogFilePath
 $LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
+#endregion
 
 
 # Table of content
@@ -71,7 +76,7 @@ $LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
 
 
 
-# 1 Test function
+#region 1 Test function
 # ---------------
 #
 # Section for all "public" Test-* functions inside this module.
@@ -96,7 +101,7 @@ $LogName = (Get-date -Format "yyyyMMdd")+"_"+$ConfigFile.Settings.LogFileName
     ID       : FBP-AD-0001
     moduleID : TC-MBAM-0001
     Task     : Service account enabled
-    Status   : true
+    Status   : True
     Passed   : Passed
 .NOTES 
     ID FBP-AD-0001
@@ -118,11 +123,11 @@ Param(
     [System.String]$moduleID
 )
     
-    if ($moduleID -eq "") { $moduleID = "N/A"}
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
 
     $obj = [TapResult]::New("FBP-AD-0001", $moduleID, "Service account enabled")
 
-    Write-Output (Test-ADAccountProperty -TapResultObject $obj -identity $identity -type $type -property "Enabled" -propertyValue "true" )
+    Write-Output (Test-ADAccountProperty -TapResultObject $obj -identity $identity -type $type -property "Enabled" -propertyValue "True" )
      
 }
 
@@ -166,7 +171,7 @@ Param(
     [System.String]$moduleID
 )
     
-    if ($moduleID -eq "") { $moduleID = "N/A"}
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
 
     $obj = [TapResult]::New("FBP-AD-0002", $moduleID, "Password has expired")
 
@@ -214,7 +219,7 @@ Param(
     [System.String]$moduleID
 )
     
-    if ($moduleID -eq "") { $moduleID = "N/A"}
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
 
     $obj = [TapResult]::New("FBP-AD-0003", $moduleID, "Password never expires")
 
@@ -250,7 +255,7 @@ Param(
     [System.String]$moduleID
 )
     
-    if ($moduleID -eq "") { $moduleID = "N/A"}
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
     $obj = [TapResult]::New("FBP-AD-0004", $moduleID, "SPNs for Service Account are as expected")
 
     Write-Verbose "[FBP-AD-0004]: Search for Service Principle Name."
@@ -345,7 +350,7 @@ Param(
     [String]$moduleId
 )
 
-    if ($moduleID -eq "") { $moduleID = "N/A"}
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
     $obj = [TapResult]::New("FBP-AD-0005", $moduleID, "Security group members in group $securityGroup are correct")
 
     $messageBag = "Additional info:" + [System.Environment]::NewLine
@@ -432,10 +437,194 @@ Param(
     Write-Output $obj
 }
 
+function Test-ADDefaultDCConnection
+{
+<#
+.Synopsis
+   Checks, if the default domain controller is reachable per ping. 
+.DESCRIPTION
+   Checks, if the default domain controller is reachable per ping. 
+   Note: if ping is blocked by firewall, the test returns an error even if the default domain controller is running.
+.PARAMETER moduleID
+    An optional ID of the module calling this function  
+.NOTES
+    ID FBP-AD-0006
+#>
+[CmdletBinding()]
+Param(   
+    [String]$moduleId
+)    
+    
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" }
 
+    try
+    {
+        $dc = Get-ADDomainController | Select-Object -ExpandProperty Name
+        $obj = [TapResult]::New("FBP-AD-0006", $moduleID, "Default Domain Controller $dc is reachable (Ping-Status)")
 
+        $connects = Test-Connection (Get-ADDomainController | Select-Object -ExpandProperty IPv4Address) -ErrorAction SilentlyContinue
 
-# 2 Further test functions and 
+        if ($connects.count -eq 0)
+        {
+            $obj.Status = "Not reachable"
+            $obj.Passed = 2
+            Write-LogFile -Path $LogPath -name $LogName -message "Domain Controller $dc not reachable" -Level Error  
+        }
+
+        elseif ($connects.count -le 2)
+        {
+            $obj.Status = "Partial reachable (<=50%)"
+            $obj.Passed = 3
+            Write-LogFile -Path $LogPath -name $LogName -message "Domain Controller $dc partial reachable (<50%)" -Level Warning 
+        }
+
+        else
+        {
+            $obj.Status = "Reachable"
+            $obj.Passed = 1 
+        }
+    }
+
+    catch 
+    {
+        $obj = [TapResult]::New("FBP-AD-0006", $moduleID, "Default Domain Controller is reachable (Ping-Status)")
+        $obj.Status = "Not reachable"
+        $obj.Passed = 4
+        Write-LogFile -Path $LogPath -name $LogName -message "Default Domain Controller not reachable" -Level Error  
+    }
+
+    Write-Output $obj
+}
+
+function Test-ForestDCsConnection
+{
+<#
+.Synopsis
+   The function pings all DC in a domain forest to check if they are available. 
+.DESCRIPTION
+   Gets all Domain Controllors in a forest and pings them. Returns a PSCustomObject for every found DC.
+   Domain Controllers matching with their IP address or name to an entry on the exception list are not pinged.
+   Exception list is for DC known to be listed but not reachable by ping because of e.g. firewall rules etc.
+.PARAMETER exceptionList
+    A list of strings representing IP addresses or DC names
+.PARAMETER moduleID
+    An optional ID of the module calling this function  
+.NOTES
+    ID FBP-AD-0007
+#>
+[CmdletBinding()]
+Param(
+    [String[]]$exceptionList,
+
+    [String]$moduleId
+)
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" } 
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-AD-0007]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [$moduleID)]"
+
+    # get default domain controller
+    $defaultDC = Get-ADDomainController -ErrorAction SilentlyContinue | Select-Object -ExpandProperty IPv4Address
+
+    try
+    {
+        # get all domain controller in forest except for default domain controller
+        $allDCs = (Get-ADForest).Domains | ForEach-Object { Get-ADDomainController -Filter * -server $_} | Where-Object {$_.IPv4Address -NE $defaultDC}
+        
+        $i = 1
+
+        # test connection to each dc
+        foreach($dc in $allDCs)
+        {
+            # if $dc is not on the exception list ( with IP or name)
+            if ( ($null -eq $exceptionList) -or (-not(($exceptionList.contains($dc.IPv4Address)) -or ($exceptionList.contains($dc.name)))) )
+            {
+                # test connection, otherwise skip 
+                $obj = [TapResult]::New("FBP-AD-0007", $moduleID, "Domain Controller "+$dc.Name+"("+$dc.IPv4Address+") is reachable (Ping-Status)")
+
+                if (Test-Connection $dc.IPv4Address -Count 2 -ErrorAction SilentlyContinue -Quiet)
+                {
+                    $obj.Status = "Reachable"
+                    $obj.Passed = 1
+                }
+
+                else
+                {
+                    $obj.Status = "Not reachable"
+                    $obj.Passed = 2
+                    Write-LogFile -Path $LogPath -name $LogName -message "Domain Controller $dc not reachable" -Level Error  
+                }
+
+                Write-Output $obj
+            }
+        }
+    }
+    # domain controllers / forest not reachable
+    catch
+    {
+        $obj = [TapResult]::New("FBP-AD-0007", $moduleID, "Domain Controller is reachable (Ping-Status)")
+        $obj.Status = "Domain controller/forest not reachable"
+        $obj.Passed = 4
+        Write-Output $obj
+        
+        Write-LogFile -Path $LogPath -name $LogName -message "Domain Controllers in Forest not reachable" -Level Error  
+    }
+}
+
+function Test-DNSServerConnection
+{
+<#
+.Synopsis
+    Checks, if the DNS servers in the environment are reachable.
+.DESCRIPTION
+    Checks, if the DNS servers in the environment are reachable. Private network addresses like IPv4 169.* and IPv6 fec0: are skipped.
+    An optional ID of the module calling this function  
+.NOTES
+    ID FBP-AD-0008
+#>
+[CmdletBinding()]
+Param(
+    [String]$moduleId
+)
+    if (($null -eq $moduleID) -or ($moduleID -eq "") ) { $moduleID = "N/A" } 
+
+    $messageBag = "Additional info:" + [System.Environment]::NewLine
+    $messageBag += "ID:[FBP-AD-0008]" + [System.Environment]::NewLine
+    $messageBag += "Module ID: [$moduleID)]"
+
+    $serverIPs = Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses -Unique
+    $counter = 1
+
+    foreach($ip in $serverIPs)
+    {
+         # Check for private network ip addresses and skip them
+        if ( (-not $ip.StartsWith("fec0")) -and (-not $ip.StartsWith("169")) )
+        {
+            $obj = [TapResult]::New("FBP-AD-0008", $moduleID+"."+$counter, "DNS-Server with IP $ip is reachable (Ping-Status)")
+           
+            if (Test-Connection $ip -ErrorAction SilentlyContinue -Quiet) 
+            {
+                $obj.Status = "Reachable"
+                $obj.Passed = 1
+            }
+            else 
+            {
+                $obj.Status = "Not reachable"
+                $obj.Passed = 2
+                Write-LogFile -Path $LogPath -name $LogName -message "DNS-server with IP $ip not reachable " -Level Error   
+            }
+
+            Write-Output $obj
+
+            $counter++
+        }
+    }
+}
+
+#endregion
+
+#region 2 Further test functions and 
 # ------------------------ 
 #
 # Section for all "private" functions
@@ -562,3 +751,5 @@ Param(
     # return the changed TapResultObject
     return $TapResultObject
 }
+
+#endregion

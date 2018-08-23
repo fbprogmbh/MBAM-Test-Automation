@@ -29,9 +29,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly | dennis.esly@fb-pro.com
     Date:             05/29/2018
-    Last change:      05/29/2018
-    Version:          0.1
-    State:            Draft
+    Last change:      08/09/2018
+    Version:          1.1
+    State:            Approved
 #>
 
 <# 
@@ -41,11 +41,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Using module TapResultClass
 
-Import-Module ..\LogFileModule\LogFileModule.psm1 -ErrorAction SilentlyContinue
+#region Imports
+Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
-$ConfigFile = Import-LocalizedData -FileName Settings.psd1
-
+$pkiExtensionModulePath = (Get-Module -ListAvailable PkiExtensionModule).Path
+$baseDir = (Get-Item $pkiExtensionModulePath).Directory.Parent.Fullname+"\Settings"
+Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+#endregion
 
 # Set the path and name of standard log file to path and name configured in settings
 $LogPath = $ConfigFile.Settings.LogFilePath

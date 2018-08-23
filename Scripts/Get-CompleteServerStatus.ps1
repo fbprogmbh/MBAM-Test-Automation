@@ -34,26 +34,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #>
 
-
+#region Imports
 Import-Module MbamExtensionModule -ErrorAction SilentlyContinue
 Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
 Import-Module ADExtensionModule -ErrorAction SilentlyContinue
 Import-Module LogFileModule -ErrorAction SilentlyContinue
+
+# Load settings from setting file
+Import-LocalizedData -FileName Settings.psd1 -BaseDirectory Settings -BindingVariable "ConfigFile"
+#endregion
 
 <#  
     Configuration
     =================================================================
 #>
 
-$mbamVersion = "2.5.1135.0"
+$mbamVersion = $ConfigFile.Settings.Mbam.Server.Version
 $mbamUrl = "http://mbam.services.corp.fbpro"
 $reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%m%d_%H%M") 
 
 $year = Get-Date -Format "yyyy"
 $month = Get-Date -Format "MM" 
 
-$reportSavePath = "C:\inetpub\wwwroot\reports\Reports\$year\$month\"
-$xmlSavePath = "C:\inetpub\wwwroot\reports\XML\$year\$month\"
+$reportSavePath = $ConfigFile.Settings.Mbam.Server.ReportPath + "$year\$month\"
+$xmlSavePath = $ConfigFile.Settings.Mbam.Server.XmlPath + "$year\$month\"
 
 
 $modulePath = (Get-Module -ListAvailable MbamExtensionModule).Path
@@ -84,7 +88,7 @@ $serviceList = @(
         'WAS', 
         'W3SVC')
 $aspNetMvc4 = @('Microsoft ASP.NET MVC 4 Runtime')
-
+ 
 $fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
 
 <#
@@ -100,7 +104,7 @@ $freeDiskSpace = "{0:N1}" -f ((get-WmiObject win32_logicaldisk | where DeviceID 
 $logo = $ConfigFile.Settings.Logo
 $updates = Get-FormattedUpdateInformation
 $sccmUpdates = Get-FormattedSccmUpdateInformation
-$restart = Test-SystemRestartMayBeNescessary
+$restart =  Test-WinSrvRestartNescessary 
 If (Get-PendingReboot) { $rebootPending = "yes" } else { $rebootPending = "no" }
 
 <#
@@ -130,7 +134,7 @@ if (!(test-path $xmlSavePath))
 #>
 
 $mbamInfrastructureStatus = @(
-    Test-MbamFirewallPortState
+    Test-WinSrvFirewallPort443State
     Test-MbamComplianceDbSrvConnection
     Test-MbamRecoveryDbSrvConnection
     Test-MbamComplianceDbConnectState
@@ -144,16 +148,16 @@ $mbamOSStatus = @(
     Test-WinSrvFeatureState -feature $windowsServerFeatureList -moduleID "TC-MBAM-0021" 
     Test-WinSrvSoftwareInstallState -softwareList $aspNetMvc4 -moduleId "TC-MBAM-0022"
     Test-WinSrvRestartedAfterUpdate -moduleId "TC-MBAM-0023"
-    Test-SccmClientUpdates
-    #Test-MaintenanceModeOn
+    Test-WinSrvSccmClientUpdates -moduleID "TC-MBAM-0043"
+    #Test-WinSrvMaintenanceModeOn -moduleID "TC-MBAM-0034" -pathToLogFile
 )
 
 $mbamApplicationStatus = @(
     Test-MbamSrvFeatureInstalled
-    Test-MbamHelpDeskPage -https
+    Test-MbamHelpDeskPage
     Test-MbamHelpDeskVirtualDir
     Test-MbamHelpDeskSPNState
-    Test-MbamSelfServicePage -https
+    Test-MbamSelfServicePage
     Test-MbamSelfSvcVirtualDir -enabled
     Test-MbamSelfServiceSPNState
     Test-MbamServerVersion $mbamVersion
@@ -163,30 +167,32 @@ $mbamApplicationStatus = @(
     Test-MbamHelpDeskPortalVersion $mbamVersion
     Test-MbamSelfSvcPortalVersion $mbamVersion -enabled
     Test-MbamSrvAgentSvcVersion $mbamVersion
-    Test-MbamSrvAccEnabled
     Test-MbamAdminSvcRunning -url $mbamUrl
     Test-MbamStatusReportSvcRunning -url $mbamUrl
     Test-MbamCoreSvcRunning -url $mbamUrl
+    Test-ADSvcAccEnabled -identity $ConfigFile.Settings.Mbam.Server.ServiceAccount -type SamAccountName -moduleID "TC-MBAM-0058"
+    Test-ADSvcAccPwdExpired -identity $ConfigFile.Settings.Mbam.Server.ServiceAccount -type SamAccountName
+    Test-ADSvcAccPwdNeverExpires -identity $ConfigFile.Settings.Mbam.Server.ServiceAccount -type SamAccountName 
 )
 
 
 $mbamSecurityStatus = @(        
-    Test-PkiCertificateValid -thumbprint $ConfigFile.Settings.CertificateThumbprint -hostname "mbam.services.corp.fbpro" -moduleID "TC-MBAM-0033"
-    Test-MbamCertificateThumbprint -thumbprint $ConfigFile.Settings.CertificateThumbprint
-    Test-MbamSSLCertificateExpirationDate
+    Test-PkiCertificateValid -thumbprint $ConfigFile.Settings.Mbam.Server.CertificateThumbprint -hostname $ConfigFile.Settings.Mbam.Server.Hostname -moduleID "TC-MBAM-0033"
+    Test-MbamCertificateThumbprint -thumbprint $ConfigFile.Settings.Mbam.Server.CertificateThumbprint
+    Test-PkiCertificateExpirationDate -thumbprint $ConfigFile.Settings.Mbam.Server.CertificateThumbprint -moduleID "TC-MBAM-0039"
     Test-MbamHelpDeskSslOnly
     Test-MbamSelfServiceSslOnly  
-    Test-ADSecurityGroupMember -securityGroup "MBAMAdvHelpDesk" -members $advHelpDeskMembers -moduleId "TC-MBAM-0035.1"  
-    Test-ADSecurityGroupMember -securityGroup "MBAMHelpDesk" -members $HelpDeskMembers -moduleId "TC-MBAM-0035.2"  
-    Test-ADSecurityGroupMember -securityGroup "MBAMReport" -members $ReportsROMembers -moduleId "TC-MBAM-0035.3"  
-    Test-LocalAdmins -knownAdmins $knownAdmins
+    Test-ADSecurityGroupMember -securityGroup $ConfigFile.Settings.Mbam.Server.AdvHelpDesk -members $advHelpDeskMembers -moduleId "TC-MBAM-0035.1"  
+    Test-ADSecurityGroupMember -securityGroup $ConfigFile.Settings.Mbam.Server.HelpDesk -members $HelpDeskMembers -moduleId "TC-MBAM-0035.2"  
+    Test-ADSecurityGroupMember -securityGroup $ConfigFile.Settings.Mbam.Server.ReportGroup -members $ReportsROMembers -moduleId "TC-MBAM-0035.3"  
+    Test-LocalAdmins -knownAdmins $knownAdmins -moduleID "TC-MBAM-0042"
     Test-LastUserLogins -acceptedUsers $expectedLogins
 )
 
 $mbamServerEnvironmentSystemsStatus = @(
-    Test-DefaultDCConnection
-    Test-DNSServerConnection
-    Test-ForestDCsConnection
+    Test-ADDefaultDCConnection -moduleID "TC-MBAM-0047"
+    Test-DNSServerConnection -moduleId "TC-MBAM-0046" 
+    Test-ForestDCsConnection -moduleID "TC-MBAM-0048" -exceptionList $ConfigFile.Settings.WinSrv.dcExceptionList
 )
 
 
