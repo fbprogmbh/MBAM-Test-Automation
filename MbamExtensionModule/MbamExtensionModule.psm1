@@ -1879,13 +1879,13 @@ Param(
     {
         [xml]$xml = Get-Content $xmlFilePath -ErrorAction Stop
 
-
         foreach($policy in $xml.GPO.Policy)
         {
+            $obj = [TapResult]::New("FBP-MBAM-0019.$($policy.PolicyID)", "TC-MBAM-0027.$($policy.PolicyID)", "GPO: $($policy.PolicyName)")
+
+
             if($policy.PolicyState -eq 'enabled')
             {
-                $obj = [TapResult]::New("FBP-MBAM-0019.$($policy.PolicyID)", "TC-MBAM-0027.$($policy.PolicyID)", "GPO: $($policy.PolicyName)")
-
                 try 
                 {
                     if (Get-MBAMGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop)
@@ -1904,21 +1904,37 @@ Param(
                     $obj.Status = "Policy not applied"
                     $obj.Passed = 2
                 }            
-                
-                Write-Output $obj
-                $i++
             }
+
+            if($policy.PolicyState -eq 'disabled')
+            {
+                try 
+                {
+                    Get-MBAMGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop
+                    
+                    $obj.Status = "Policy falsely enabled"
+                    $obj.Passed = 2
+
+                    # log error
+                    $mes = "MBAM Policy $($policy.PolicyKey) falsely enabled, please check settings."+[System.Environment]::NewLine
+                    $msg += $_.Exception.toString()+[System.Environment]::NewLine
+                    $msg += "; " + $_.ScriptStackTrace.toString()
+                    write-LogFile -Path $LogPath -name $LogName -message $msg -Level Error
+
+                }
+                catch
+                {
+                    $obj.Status = "Policy disabled as expected"
+                    $obj.Passed = 1
+                }            
+            }
+
+            Write-Output $obj
+            $i++
         }
     }
     catch 
     {
-        #$obj = New-Object PSObject
-        #$obj | Add-Member NoteProperty Name("TC-MBAM-0027")
-        #$obj | Add-Member NoteProperty Task("GPOs are correct")
-        #$obj | Add-Member NoteProperty Status("Reference source gpo.xml or equivalent not found")
-        #$obj | Add-Member NoteProperty Passed("false")
-        Write-Output $obj
-
         # log error
         $msg = $_.Exception.toString()
         $msg += "; " + $_.ScriptStackTrace.toString()
@@ -2153,37 +2169,46 @@ Param()
     try 
     {
         Write-Verbose "[FBP-MBAM-0023]:Get last report send time"
-        $statusReportingTime = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM/operational";ID=3} -MaxEvents 1 -ErrorAction Stop | Select-Object -ExpandProperty TimeCreated
+        $lastStatusReportTime = Get-WinEvent -FilterHashtable @{logname="microsoft-windows-MBAM/operational";ID=3} -MaxEvents 1 -ErrorAction Stop | Select-Object -ExpandProperty TimeCreated
     
         Write-Verbose "[FBP-MBAM-0023]:Get status report frequency"
         $statusReportingFrequency = Get-item 'HKLM:\SOFTWARE\Policies\Microsoft\FVE\MDOPBitLockerManagement' -ErrorAction Stop | Get-ItemProperty | Select-Object -ExpandProperty "StatusReportingFrequency"
         
-        Write-Verbose "[FBP-MBAM-0023]:Get last system startup time"
-        $lastStartup = Get-SystemStartupTime
+        Write-Verbose "[FBP-MBAM-0023]:Get system up time (active)"
+        $systemUpTime = (Measure-SystemUpTime).TotalMinutes
         
-        $time = (Get-Date).AddMinutes(-$statusReportingFrequency)
+        # current time minus the status report frequency => period of time in which status should be reported
+        $StatusReportDeadline = (Get-Date).AddMinutes(-$statusReportingFrequency)
 
-        Write-Verbose "[FBP-MBAM-0023]:Check if time difference is valid"    
-        if ($lastStartup -gt $time)
+        Write-Verbose "[FBP-MBAM-0023]: Check if status was reported within valid frequency"  
+        
+        if ($systemUpTime -lt $StatusReportDeadline)
         {
-            if($statusReportingTime -gt $time)
+            # if system up time is lower than status report frequency
+            # and status was reported
+            if($statusReportedTime -gt $StatusReportDeadline)
             {
-                $obj.Status = "Status reported at $statusReportingTime"
+                # all good
+                $obj.Status = "Status reported at $statusReportedTime"
                 $obj.Passed = 1
             }
+            # status was not reported, but system up time minutes lower than report frequency minutes
             else
             {
-                $obj.Status = "Last system startup within report frequency, status not reported yet"
+                $obj.Status = "System up time within report frequency, status not reported yet"
                 $obj.Passed = 3
             }
-        }
+        } 
         else
         {
-            if($statusReportingTime -gt $time)
+            # if system up time is greater than status report frequency
+            # and status was reported
+            if($statusReportedTime -gt $StatusReportDeadline)
             {
-                $obj.Status = "Status reported at $statusReportingTime"
+                $obj.Status = "Status reported at $statusReportedTime"
                 $obj.Passed = 1
             }
+            # status was not reported and system up time exceeds report frequency
             else
             {
                 $obj.Status = "No status reported within regular frequency"
