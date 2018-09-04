@@ -31,8 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author:        Dennis Esly
     Date:          02/27/2017
-    Last change:   05/02/2017
-    Version:       1.0
+    Last change:   09/04/2018
+    Version:       2.0
 
     Registers a scheduled task, which daily execute a PowerShell script to create
     a MBAM server status report. 
@@ -44,7 +44,7 @@ Param(
     [string]$startTime = "7am"  
 )
 
-$taskAction = New-ScheduledTaskAction –Execute "Powershell.exe" -Argument $PSScriptRoot"\Get-CompleteMbamServerReport.ps1"
+$taskAction = New-ScheduledTaskAction –Execute "Powershell.exe" -Argument $PSScriptRoot"\Get-CompleteServerReport.ps1"
 $taskTrigger = New-ScheduledTaskTrigger -Daily -At $startTime
 $taskPrincipal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest 
 $taskSettingsSet = New-ScheduledTaskSettingsSet
