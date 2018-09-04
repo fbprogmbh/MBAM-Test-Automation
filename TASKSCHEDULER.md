@@ -6,3 +6,6 @@ scheduler with a new daily task which will run the MBAM report script at 7 am.
 This task will run with the NT AUTHORITY\SYSTEM account.
 
 You can edit the start time for the task inside the script, pass it as parameter or edit it in the task scheduler management console later on.
+
+**Attention**
+Do not move the script to another location before running as it will use the script root to register the script *Get-CompleteServerReport.ps1*
