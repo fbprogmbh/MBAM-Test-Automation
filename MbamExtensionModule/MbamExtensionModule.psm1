@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #    Author(s):        Dennis Esly | dennis.esly@fb-pro.com
 #    Date:             05/03/2018
 #    Last change:      08/09/2018
-#    Version:          2.1.1
+#    Version:          2.0.1
 #    State:            Approved
 #
 #endregion
@@ -638,6 +638,8 @@ Param(
         }
     catch
     {
+        $obj.Status = "Error"
+        $obj.Passed = 4   
         # log error
         $msg = $_.Exception.toString()
         $msg += "; " + $_.ScriptStackTrace.toString()

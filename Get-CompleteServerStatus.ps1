@@ -29,14 +29,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      11/29/2017
-    Version:          1.1
+    Last change:      09/04/2018
+    Version:          2.0.1
 
 #>
 
+Param(
+    # The day of week to additionaly send an report by email
+    [ValidateSet(0,1,2,3,4,5,6)]
+    [int[]]$dayOfWeek = 4    
+)
+
 #region Imports
 Import-Module MbamExtensionModule -ErrorAction SilentlyContinue
-Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
 Import-Module ADExtensionModule -ErrorAction SilentlyContinue
 Import-Module LogFileModule -ErrorAction SilentlyContinue
 
@@ -44,11 +49,7 @@ Import-Module LogFileModule -ErrorAction SilentlyContinue
 Import-LocalizedData -FileName Settings.psd1 -BaseDirectory Settings -BindingVariable "ConfigFile"
 #endregion
 
-<#  
-    Configuration
-    =================================================================
-#>
-
+#region Configuration
 $mbamVersion = $ConfigFile.Settings.Mbam.Server.Version
 $mbamUrl = "http://mbam.services.corp.fbpro"
 $reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%m%d_%H%M") 
@@ -90,11 +91,10 @@ $serviceList = @(
 $aspNetMvc4 = @('Microsoft ASP.NET MVC 4 Runtime')
  
 $fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
+#endregion
 
-<#
-    Configuration for short system information in report
-    ==============================================
-#>
+
+#region Configuration for short system information in report
 $reportDate = Get-Date -Format g
 $currentHost = [System.Net.Dns]::GetHostByName(($env:computerName)) | select -ExpandProperty Hostname
 $osInfo = Get-OperatingSystemInfo
@@ -106,14 +106,9 @@ $updates = Get-FormattedUpdateInformation
 $sccmUpdates = Get-FormattedSccmUpdateInformation
 $restart =  Test-WinSrvRestartNescessary 
 If (Get-PendingReboot) { $rebootPending = "yes" } else { $rebootPending = "no" }
+#endregion
 
-<#
-    Check and ensure necessary framework conditions
-    ===================================================================
-
-    Check conditions like existence of filepath for reports and xml files 
-    and create it if necessary.
-#>
+#region Create folder structure for saving reports
 
 # Test if path for saving report files exists, otherwise create it
 if (!(test-path $reportSavePath))
@@ -126,13 +121,11 @@ if (!(test-path $xmlSavePath))
 {
     New-Item -Path $xmlSavePath -ItemType Directory -Force
 }
+#endregion
 
+#region Run testcases and save results in section variables
 
-<# 
-    Run testcases and save the results in a variable
-    =================================================================== 
-#>
-
+# Infrastructur tests
 $mbamInfrastructureStatus = @(
     Test-WinSrvFirewallPort443State
     Test-MbamComplianceDbSrvConnection
@@ -141,6 +134,7 @@ $mbamInfrastructureStatus = @(
     Test-MbamRecoveryDbConnectState
 )
 
+# Operating system tests
 $mbamOSStatus = @(
     Test-WinSrvFeatureState -feature "web-server" -moduleID "TC-MBAM-0018"
     Test-WinSrvFeatureState -feature $webServerfeatureList -moduleID "TC-MBAM-0019" 
@@ -152,6 +146,7 @@ $mbamOSStatus = @(
     #Test-WinSrvMaintenanceModeOn -moduleID "TC-MBAM-0034" -pathToLogFile
 )
 
+# Mbam application tests
 $mbamApplicationStatus = @(
     Test-MbamSrvFeatureInstalled
     Test-MbamHelpDeskPage
@@ -175,7 +170,7 @@ $mbamApplicationStatus = @(
     Test-ADSvcAccPwdNeverExpires -identity $ConfigFile.Settings.Mbam.Server.ServiceAccount -type SamAccountName 
 )
 
-
+# Security tests
 $mbamSecurityStatus = @(        
     Test-PkiCertificateValid -thumbprint $ConfigFile.Settings.Mbam.Server.CertificateThumbprint -hostname $ConfigFile.Settings.Mbam.Server.Hostname -moduleID "TC-MBAM-0033"
     Test-MbamCertificateThumbprint -thumbprint $ConfigFile.Settings.Mbam.Server.CertificateThumbprint
@@ -189,19 +184,35 @@ $mbamSecurityStatus = @(
     Test-LastUserLogins -acceptedUsers $expectedLogins
 )
 
+# Environment system tests
 $mbamServerEnvironmentSystemsStatus = @(
     Test-ADDefaultDCConnection -moduleID "TC-MBAM-0047"
     Test-DNSServerConnection -moduleId "TC-MBAM-0046" 
     Test-ForestDCsConnection -moduleID "TC-MBAM-0048" -exceptionList $ConfigFile.Settings.WinSrv.dcExceptionList
 )
 
+# collect all test results in one variable
+$allResults =   $mbamInfrastructureStatus + `
+                $mbamOSStatus + `
+                $mbamApplicationStatus + `
+                $mbamSecurityStatus + `
+                $mbamServerEnvironmentSystemsStatus
+    
+#endregion
 
+#region Get values for Overall Report Status
+$passed, $warning, $failed, $counter = 0
 
-<#  
-    Build the report
-    ====================================================================
-#>
-          
+foreach ($result in $allResults)
+{
+    if($result.passed -eq 1) { $passed++ }
+    elseif ($result.passed -eq 3) { $warning++ }
+    elseif ( ($result.passed -eq 2) -or ($result.Passed -eq 4) ) { $failed++ }
+    $counter++
+}
+#endregion
+
+#region Build the report    
 $report = "<!DOCTYPE html>
         <html>
             <head>
@@ -251,7 +262,13 @@ $report = "<!DOCTYPE html>
 
                 <p>Report created at $reportDate on <span class=`"hostname`">$currentHost</span></p>"
 
+# Add overview status to report
+$report += "<h2>Overall Report Status</h2>"
+$report += "<table style=`"width: 150px;`"><tr><td>Passed:</td><td class=`"passed`">$passed</td></tr><tr><td>Warnings:</td><td class=`"warning`">$warning</td></tr><tr><td>Errors:</td><td class=`"failed`">$failed</td></tr><tr><td>Total</td><td>$counter</td></tr></table>"
+
+#region Report navigation
 # Add a navigation to the report 
+$report += "<h2>Navigation</h2>"
 $report += "<nav><ul>"
 $report += New-MbamReportNavPoint -resultObjects $mbamInfrastructureStatus -navPointText "Infrastructure status" -anchor "1" 
 $report += New-MbamReportNavPoint -resultObjects $mbamOSStatus -navPointText "Operating System status" -anchor "2" 
@@ -262,8 +279,9 @@ $report += "<li><a href=`"#6`">User Login History</a></li>"
 $report += "<li><a href=`"#7`">Update History</a></li>" 
 $report += "<li><a href=`"#8`">SCCM deployment history</a></li>"   
 $report += "</ul></nav>"         
+#endregion
 
-# Add a short system overview                
+#region Short system overview               
 $report +=  "<table class=`"info`">
                 <tr>
                     <td>Host:</td>
@@ -310,8 +328,9 @@ $report +=  "<table class=`"info`">
                     <td>$rebootPending</td>
                 </tr>                        
             </table>"
- 
- try
+ #endregion
+
+try
 {      
     
 # Get infrastructure status      
@@ -348,33 +367,60 @@ $report += Get-SccmDeploymentHistory -number 20 | ConvertTo-Html -Head "" -PreCo
 $report += "</body></html>"
 
 
-# Save the report 
+#region Save the report 
 $report > $reportSavePath"MbamWebserver_report_$fileDate.html"
 
+#endregion
 
+#region Save results in XML file  
+#
+# Save the returned TapResult objects in a XML file for a later use.
+# This functionality can be disabled in Settings.psd1, see Settings->Mbam->Server->SaveXML
 
-<#  
-    Save results in XML file
-    ================================================================================
-#>
-
-$allResults = $mbamInfrastructureStatus + $mbamOSStatus + $mbamApplicationStatus + $mbamSecurityStatus + $mbamServerEnvironmentSystemsStatus
-
-# If there are testresult objects, save them in a xml file
-if($allResults)
+if ($ConfigFile.Settings.Mbam.Server.SaveXML)
 {
-    $allResults | Export-Clixml $xmlSavePath"MbamServer_Reportobjects_$fileDate.xml"
+
+    $allResults = $mbamInfrastructureStatus + $mbamOSStatus + $mbamApplicationStatus + $mbamSecurityStatus + $mbamServerEnvironmentSystemsStatus
+
+    # If there are testresult objects, save them in a xml file
+    if($allResults)
+    {
+        $allResults | Export-Clixml $xmlSavePath"MbamServer_Reportobjects_$fileDate.xml"
+    }
 }
+#endregion
 
+#region Send error mail  
+#
+# Send an error mail for each warning or error occured
+# This functionality must be enabled in Settings.psd1, see Settings->Mbam->Server->SendError
 
-<#  
-    Send error email 
-    =================================================================================
-#>
-#Send-MbamEmailOnError -resultObjects $allResults
-
+if ($ConfigFile.Settings.Mbam.Server.SendReport)
+{
+    Send-MbamEmailOnError -resultObjects $allResults
 }
+#endregion
 
+
+#region Send report as HTML-Mail
+#
+# Send the report as HTML-Mail to the email address configured in Settings.psd1 
+# This functionality must be enabled in Settings.psd1, see Settings->Mbam->Server->SendReport  
+#
+
+if ($ConfigFile.Settings.Mbam.Server.SendReport)
+{
+    # If day of week matches, send report as email
+    foreach ($day in $dayOfWeek)
+    {
+        if ($day -eq (Get-Date).DayOfWeek.value__)
+        {
+            Send-MbamEmailReport -body ($report | Out-String)
+        }
+    }
+}
+#endregion
+}
 # Catch any occured error and write it to log file
 catch 
 {

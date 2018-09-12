@@ -1006,20 +1006,17 @@ function Get-LocalAdmins
     }
     $admins = @()
 
-    if(Get-Module ActiveDirectory)
-    {
-        foreach($member in $members)
-        {  
-            try {      
-                # Try if $member is a AD group and get all members of this group including all nested groups      
-                $admins += (Get-ADGroupMember $member -Recursive | Select-Object -ExpandProperty SamAccountName)
-            }
-            catch
-            {
-                # TODO catch unterscheiden nach nicht gefunden oder active directory Fehler
-                # If it is not a AD group, it has to be a local account, so add it (we assume local groups are not used inside the company)
-                $admins += $member
-            }
+    foreach($member in $members)
+    {  
+        try {      
+            # Try if $member is a AD group and get all members of this group including all nested groups      
+            $admins += (Get-ADGroupMember $member -Recursive | Select-Object -ExpandProperty SamAccountName)
+        }
+        catch
+        {
+            # TODO catch unterscheiden nach nicht gefunden oder active directory Fehler
+            # If it is not a AD group, it has to be a local account, so add it (we assume local groups are not used inside the company)
+            $admins += $member
         }
     }
     # Remove duplicated accounts und output the unique ones
