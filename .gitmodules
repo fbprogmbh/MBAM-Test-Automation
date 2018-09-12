@@ -1,4 +1,0 @@
-[submodule "ADExtensionModule"]
-	path = ADExtensionModule
-	url = https://github.com/fbprogmbh/ADExtensionModule
-	branch = master
