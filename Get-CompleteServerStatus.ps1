@@ -29,19 +29,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      09/04/2018
-    Version:          2.0.1
+    Last change:      09/12/2018
+    Version:          2.0.2
 
 #>
 
 Param(
     # The day of week to additionaly send an report by email
     [ValidateSet(0,1,2,3,4,5,6)]
-    [int[]]$dayOfWeek = 4    
+    [int[]]$dayOfWeek = 4,
+
+    # Switch to get a shortened report
+    [switch]$short    
 )
 
 #region Imports
 Import-Module MbamExtensionModule -ErrorAction SilentlyContinue
+Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
 Import-Module ADExtensionModule -ErrorAction SilentlyContinue
 Import-Module LogFileModule -ErrorAction SilentlyContinue
 
@@ -56,7 +60,6 @@ $reportHtmlTitle = "FB Pro GmbH - MBAM-Server report " + (Get-Date -UFormat "%Y%
 
 $year = Get-Date -Format "yyyy"
 $month = Get-Date -Format "MM" 
-
 $reportSavePath = $ConfigFile.Settings.Mbam.Server.ReportPath + "$year\$month\"
 $xmlSavePath = $ConfigFile.Settings.Mbam.Server.XmlPath + "$year\$month\"
 
@@ -205,6 +208,7 @@ $passed, $warning, $failed, $counter = 0
 
 foreach ($result in $allResults)
 {
+
     if($result.passed -eq 1) { $passed++ }
     elseif ($result.passed -eq 3) { $warning++ }
     elseif ( ($result.passed -eq 2) -or ($result.Passed -eq 4) ) { $failed++ }
@@ -354,6 +358,10 @@ $report += New-MbamReportSectionHeader -resultObjects $mbamServerEnvironmentSyst
 $report += $mbamServerEnvironmentSystemsStatus | ConvertTo-TapResultHtmlTable         
      
 $report += "</table></div>"
+
+# if full report is requested, get user login history, update history and SCCM deployment history, otherwise skip this part
+if ($short -ne $true)
+{
 # Add user login history to report
 $report += Get-UserLoginHistory | ConvertTo-Html -Head "" -PreContent "<h3 id=`"6`">User Login Histroy (last 7 days)</h3>"
 
@@ -362,6 +370,8 @@ $report += Get-UpdateHistory -number 20 | ConvertTo-Html -Head "" -PreContent "<
 
 # Add SCCM deployment history to report
 $report += Get-SccmDeploymentHistory -number 20 | ConvertTo-Html -Head "" -PreContent "<h3 id=`"8`">Deployment group history (last 20 assignments)</h3>"
+}
+
 
 # Closing html tags
 $report += "</body></html>"
@@ -421,6 +431,7 @@ if ($ConfigFile.Settings.Mbam.Server.SendReport)
 }
 #endregion
 }
+
 # Catch any occured error and write it to log file
 catch 
 {
