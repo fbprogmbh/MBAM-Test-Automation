@@ -2264,7 +2264,7 @@ Param()
         }
         else
         {
-            $obj.Status("TPM not present")
+            $obj.Status = "TPM not present"
             $obj.Passed = 2
         }
     }
