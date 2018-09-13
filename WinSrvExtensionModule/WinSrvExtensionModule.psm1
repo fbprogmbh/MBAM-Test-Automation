@@ -1266,7 +1266,7 @@ Param(
     [DateTime]$since
 )
     [TimeSpan]$counter = 0
-    Get-EventLog -LogName system -InstanceId 1 -Source Microsoft-Windows-Power-TroubleShooter | Where-Object TimeGenerated -gt $since |
+    Get-EventLog -LogName system -InstanceId 1 -Source Microsoft-Windows-Power-TroubleShooter -ErrorAction SilentlyContinue | Where-Object TimeGenerated -gt $since |
     ForEach-Object {
         [DateTime]$sleeptime = $_.ReplacementStrings[0]
         [DateTime]$wakeTime = $_.ReplacementStrings[1]
