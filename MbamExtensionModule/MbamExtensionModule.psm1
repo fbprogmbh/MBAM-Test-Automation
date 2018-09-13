@@ -1912,7 +1912,7 @@ Param(
             {
                 try 
                 {
-                    Get-MBAMGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop
+                    Get-MBAMGpoRuleState -PolicyKey $policy.PolicyKey -PolicyValue $policy.PolicyValue -path $policy.PolicyPath -ErrorAction Stop | Out-Null
                     
                     $obj.Status = "Policy falsely enabled"
                     $obj.Passed = 2
