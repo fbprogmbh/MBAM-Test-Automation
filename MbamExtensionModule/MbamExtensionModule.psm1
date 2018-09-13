@@ -2302,7 +2302,7 @@ Param()
 
     if($null -ne $tpm)
     {
-        if($Tpm.IsOwned().isOwned)
+        if($tpm.IsOwned_InitialValue)
         {
             $obj.Status = "TPM is owned"
             $obj.Passed = 1
