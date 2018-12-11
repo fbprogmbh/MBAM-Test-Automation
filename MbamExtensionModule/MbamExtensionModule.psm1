@@ -29,8 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #    Author(s):        Dennis Esly | dennis.esly@fb-pro.com
 #    Date:             05/03/2018
-#    Last change:      08/09/2018
-#    Version:          2.0.1
+#    Last change:      11/12/2018
+#    Version:          2.0.2
 #    State:            Approved
 #
 #endregion
@@ -2410,8 +2410,8 @@ Param()
         "6.3.9600" { $expectedFileVersion = "63960017031"; break } 
         "10.0.14393" { $expectedFileversion = "100143930"; break } # Windows 10 
         "10.0.15063" { $expectedFileVersion = "10015063502"; break } # Windows 10 Creators Update 1703
-        "10.0.16299" { $expectedFileVersion = "1001629915"; break } # Windows 10 fall update 1709
-        "10.0.17134" { $expectedFileVersion = "100171341"; break } # Windows 10 spring update 1803
+        "10.0.16299" { $expectedFileVersion = "10016299371"; break } # Windows 10 fall update 1709
+        "10.0.17134" { $expectedFileVersion = "10017134441"; break } # Windows 10 spring update 1803
         default { $expectedFileVersion = "0"; break }
     }
 
