@@ -45,12 +45,14 @@ Import-Module BitLocker -ErrorAction SilentlyContinue
 Import-Module TrustedPlatformModule -ErrorAction SilentlyContinue
 Import-Module LogFileModule -ErrorAction SilentlyContinue
 Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
+#endregion
 
-# Load settings from setting file
+#region Load settings from setting file
 $mbamExtensionModulePath = (Get-Module -ListAvailable MbamExtensionModule).Path
 $baseDir = (Get-Item $mbamExtensionModulePath).Directory.Parent.Fullname+"\Settings"
 Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
 #endregion
+
 
 #region Set log file settings
 
@@ -447,7 +449,7 @@ Param(
     [string]$url
 )   
 
-    Test-MBAMWCFServiceState -serviceType report -uri $url -id FBP-MBAM-0009 -moduleId TC-MBAM-0008
+    Test-MbamWCFServiceState -serviceType report -uri $url -id FBP-MBAM-0009 -moduleId TC-MBAM-0008
 }
 
 function Test-MbamCoreSvcRunning
@@ -463,9 +465,9 @@ function Test-MbamCoreSvcRunning
 .EXAMPLE
     PS C:\> Test-MbamStatusReportSvcRunning -url http://mbam.services.corp.fbpro
 
-    ID       : FBP-MBAM-0009
-    moduleID : TC-MBAM-0008
-    Task     : Webservice StatusReportingService.svc running
+    ID       : FBP-MBAM-0010
+    moduleID : TC-MBAM-0009
+    Task     : Webservice CoreService.svc running
     Status   : Running
     Passed   : Passed
 .NOTES
@@ -476,8 +478,8 @@ function Test-MbamCoreSvcRunning
 Param(
     [string]$url
 )   
-
-    Test-MbamWCFServiceState -serviceType report -uri $url -id FBP-MBAM-0010 -moduleId TC-MBAM-0009
+    
+    Test-MbamWCFServiceState -serviceType core -uri $url -id FBP-MBAM-0010 -moduleId TC-MBAM-0009
 }
 
 function Test-MbamHelpDeskSslOnly
@@ -2820,22 +2822,26 @@ Param(
     {
         'admin' {
             $service = "MBAMAdministrationService/AdministrationService.svc"
-            $obj.Task = "Webservice AdministrationService.svc running"}
+            $obj.Task = "Webservice AdministrationService.svc running"
+            break;}
         'user' {
             $service = "MBAMUserSupportService/UserSupportService.svc"
-            $obj.Task = "Webservice UserSupportService.svc running"}
+            $obj.Task = "Webservice UserSupportService.svc running"
+            break;}
         'report' {
             $service = "MBAMComplianceStatusService/StatusReportingService.svc"
-            $obj.Task = "Webservice StatusReportingService.svc running"}
+            $obj.Task = "Webservice StatusReportingService.svc running"
+            break;}
         'core' {
             $service = "MBAMRecoveryAndHardwareService/CoreService.svc"
-            $obj.Task = "Webservice CoreService(RecoveryAndHardware) running"}
-        Default {$service = $null} #
+            $obj.Task = "Webservice CoreService(RecoveryAndHardware) running"
+            break;}
+        Default {$service = $null} 
     }
 
     Try
     {
-        # we excpected this request to fail with a 401 because we do not pass any credentials
+        # we expected this request to fail with a 401 because we do not pass any credentials
         Invoke-WebRequest -URI "$uri/$service" -ErrorAction Stop
 
         # We should not get to this point, otherwise the service is open to the world without checking credentials
