@@ -29,8 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly
     Date:             02/02/2017
-    Last change:      09/12/2018
-    Version:          2.0.2
+    Last change:      12/12/2018
+    Version:          2.1.0
 
 #>
 
@@ -48,9 +48,18 @@ Import-Module MbamExtensionModule -ErrorAction SilentlyContinue
 Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
 Import-Module ADExtensionModule -ErrorAction SilentlyContinue
 Import-Module LogFileModule -ErrorAction SilentlyContinue
+#endregion
 
-# Load settings from setting file
+#region Load settings from setting file
 Import-LocalizedData -FileName Settings.psd1 -BaseDirectory Settings -BindingVariable "ConfigFile"
+#endregion
+
+#region Load CSS styles
+$scriptRoot = Split-Path -Parent $PSCommandPath
+
+$cssDocument = "/Styles/styles.css"
+$cssPath = $scriptRoot | Join-path -ChildPath $cssDocument
+$css = Get-Content $cssPath
 #endregion
 
 #region Configuration
@@ -73,24 +82,24 @@ $ReportsROMembers = Get-Content "$modulePath\ReportsROMembers.txt"
 $knownAdmins = Get-Content "$modulePath\knownLocalAdmins.txt"
 $expectedLogins = Get-Content "$modulePath\expectedLogins.txt"
 $webServerFeatureList = @(
-        'Web-Static-Content', 
-        'Web-Default-Doc',
-        'Web-Asp-Net45', 
-        'Web-Net-Ext45', 
-        'Web-ISAPI-Ext', 
-        'Web-ISAPI-Filter', 
-        'Web-Windows-Auth', 
-        'Web-Filtering')
+    'Web-Static-Content', 
+    'Web-Default-Doc',
+    'Web-Asp-Net45', 
+    'Web-Net-Ext45', 
+    'Web-ISAPI-Ext', 
+    'Web-ISAPI-Filter', 
+    'Web-Windows-Auth', 
+    'Web-Filtering')
 $windowsServerFeatureList = @(
-            'Net-Framework-45-Core', 
-            'NET-WCF-HTTP-Activation45', 
-            'NET-WCF-TCP-Activation45', 
-            'WAS-Process-Model', 
-            'WAS-NET-Environment', 
-            'WAS-Config-APIs')
+    'Net-Framework-45-Core', 
+    'NET-WCF-HTTP-Activation45', 
+    'NET-WCF-TCP-Activation45', 
+    'WAS-Process-Model', 
+    'WAS-NET-Environment', 
+    'WAS-Config-APIs')
 $serviceList = @(
-        'WAS', 
-        'W3SVC')
+    'WAS', 
+    'W3SVC')
 $aspNetMvc4 = @('Microsoft ASP.NET MVC 4 Runtime')
  
 $fileDate = Get-Date -UFormat "%Y%m%d_%H%M"
@@ -206,56 +215,38 @@ $allResults =   $mbamInfrastructureStatus + `
 #region Get values for Overall Report Status
 $passed, $warning, $failed, $counter = 0
 
-foreach ($result in $allResults)
-{
-
+foreach ($result in $allResults) {
     if($result.passed -eq 1) { $passed++ }
     elseif ($result.passed -eq 3) { $warning++ }
     elseif ( ($result.passed -eq 2) -or ($result.Passed -eq 4) ) { $failed++ }
     $counter++
 }
+
+if ( (($allResults | Where-Object ID -eq "FBP-MBAM-0015" | Select-Object -ExpandProperty Passed) -eq "Passed") -and `     (($allResults | Where-Object ID -eq "FBP-MBAM-0034" | Select-Object -ExpandProperty Status) -eq "Enabled")) {
+        $helpDesk = '<li>HelpDesk Page <span class="rounded green"></span></li>'
+}
+else {
+    $helpDesk = '<li>HelpDesk Page <span class="rounded red"></span></li>' 
+}
+
+if ( (($allResults | Where-Object ID -eq "FBP-MBAM-0016" | Select-Object -ExpandProperty Passed) -eq "Passed") -and `     (($allResults | Where-Object ID -eq "FBP-MBAM-0035" | Select-Object -ExpandProperty Status) -eq "Enabled")) {
+        $selfService = '<li>SelfService Page <span class="rounded green"></span></li>'
+}
+else {
+    $selfService = '<li>SelfService Page <span class="rounded red"></span></li>' 
+}
+
+
+$statusbar = "<ul id=`"statusbar`" class=`"clearfix`"> "+$helpDesk + $selfService +"</ul>"
 #endregion
+
 
 #region Build the report    
 $report = "<!DOCTYPE html>
         <html>
             <head>
                 <title>$reportHtmlTitle</title>
-                <style>
-                    html {margin: 0; padding: 0;}
-                    body {font-size: 14px; margin: 0; padding: 0 0 10px 0;}
-                    h1 {color: #fff;}
-                    h1 span {text-transform: uppercase;}
-                    h3 {margin-top: 40px; padding: 5px; max-width: 40%; text-transform: uppercase;}
-                    h1, h2, h3, p, table, img {margin-left: 20px;}
-                    ul {list-style-type: square; font-size: 16px;}
-                    li {margin-top: 5px; padding: 3px;}
-                    li:hover {background-color: #f2f2f2;}
-                    li a {text-decoration: none; color: #000}
-                    p {font-size: 16px;}
-                    table, table.result-table {width: 90%; border: 1px solid darkgrey; border-collapse: collapse;font-family: Arial, sans-serif;}
-                    table.info {max-width: 950px; border: 1px solid black; border-collapse: collapse;font-family: Courier, sans-serif;}
-                    th {background-color: #d6d6c2; color: white; text-transform: uppercase; font-size: 1.5em; border-bottom: 1px solid darkgray;}
-                    th, td {padding: 5px 10px; text-align: left;}
-                    tr:nth-child(even) {background-color: #e6e6e6;}
-                    tr:hover {background-color: #a6a6a6;}
-                    table.result-table td:first-child {width: 15%}
-                    table.result-table td:nth-child(2) {width: 50%;}
-                    table.result-table td:nth-child(3) {width: 20%;}
-                    table.result-table td:last-child {width: 15%;}
-                    table.result-table th:last-child {text-align: center;}
-                    table.info td:first-child {width: 250px;}
-                    table.info td:last-child {width: 700px;}
-                    table.info ul {padding-left: 15px;}
-                    .header {background-color: #bfbfbf; width: 100%; padding: 20px 0;}
-                    .header img {text-align: center;}
-                    .passed, .green {background-color: #33cc33; color: #fff;}
-                    .failed, .red {background-color: #cc0000; color: #fff;}
-                    .warning, .orange {background-color: #ff9933; color: #fff;}
-                    .green, .red, .orange {width: 25px; height: auto; display: inline-block; text-align: center;}
-                    .hostname {color: #3366ff; font-weight: bold;}
-                    span.passed, span.failed, span.warning {display: block; padding: 5px; border-radius: 30px; width: 25px; text-align: center; font-weight: bold; margin: auto;}
-                </style>
+                <style>$css</style>
             </head>
             <body>
                 <div class=`"header`">
@@ -268,6 +259,7 @@ $report = "<!DOCTYPE html>
 
 # Add overview status to report
 $report += "<h2>Overall Report Status</h2>"
+$report += $statusbar
 $report += "<table style=`"width: 150px;`"><tr><td>Passed:</td><td class=`"passed`">$passed</td></tr><tr><td>Warnings:</td><td class=`"warning`">$warning</td></tr><tr><td>Errors:</td><td class=`"failed`">$failed</td></tr><tr><td>Total</td><td>$counter</td></tr></table>"
 
 #region Report navigation
