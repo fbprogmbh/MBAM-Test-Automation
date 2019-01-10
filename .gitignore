@@ -2,3 +2,8 @@ DocGenerator/
 /.vs/ProjectSettings.json
 /.vs/slnx.sqlite
 /.vs/
+MbamExtensionModule/knownLocalAdmins.txt
+MbamExtensionModule/expectedLogins.txt
+MbamExtensionModule/ReportsROMembers.txt
+MbamExtensionModule/HelpDeskMembers.txt
+MbamExtensionModule/AdvHelpDeskMembers.txt
