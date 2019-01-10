@@ -46,8 +46,8 @@ Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
 $pkiExtensionModulePath = (Get-Module -ListAvailable PkiExtensionModule).Path
-$baseDir = (Get-Item $pkiExtensionModulePath).Directory.Parent.Fullname+"\Settings"
-Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+$baseDir = (Get-Item $pkiExtensionModulePath).Directory.Parent.Fullname
+$ConfigFile = Import-PowerShellDataFile -LiteralPath "$baseDir\Settings\Settings.psd1"
 #endregion
 
 # Set the path and name of standard log file to path and name configured in settings

@@ -29,8 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     Author(s):        Dennis Esly | dennis.esly@fb-pro.com
     Date:             04/20/2018
-    Last change:      07/16/2018
-    Version:          1.0
+    Last change:      01/10/2019
+    Version:          1.0.1
     State:            Tested
 #>
 
@@ -47,8 +47,8 @@ Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
 $adExtensionModulePath = (Get-Module -ListAvailable ADExtensionModule).Path
-$baseDir = (Get-Item $adExtensionModulePath).Directory.Parent.Fullname+"\Settings"
-Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+$baseDir = (Get-Item $adExtensionModulePath).Directory.Parent.Fullname
+$ConfigFile = Import-PowerShellDataFile -LiteralPath "$baseDir\Settings\Settings.psd1"
 #endregion
 
 #region Log configuration

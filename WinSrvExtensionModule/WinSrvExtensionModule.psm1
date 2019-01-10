@@ -46,8 +46,8 @@ Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
 $winSrvExtensionModulePath = (Get-Module -ListAvailable WinSrvExtensionModule).Path
-$baseDir = (Get-Item $winSrvExtensionModulePath).Directory.Parent.Fullname+"\Settings"
-Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+$baseDir = (Get-Item $winSrvExtensionModulePath).Directory.Parent.Fullname
+$ConfigFile = Import-PowerShellDataFile -LiteralPath "$baseDir\Settings\Settings.psd1"
 
 #endregion
 

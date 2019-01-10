@@ -48,8 +48,8 @@ Import-Module WinSrvExtensionModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
 $mbamExtensionModulePath = (Get-Module -ListAvailable MbamExtensionModule).Path
-$baseDir = (Get-Item $mbamExtensionModulePath).Directory.Parent.Fullname+"\Settings"
-Import-LocalizedData -FileName Settings.psd1 -BaseDirectory $baseDir -BindingVariable "ConfigFile"
+$baseDir = (Get-Item $mbamExtensionModulePath).Directory.Parent.Fullname
+$ConfigFile = Import-PowerShellDataFile -LiteralPath "$baseDir\Settings\Settings.psd1"
 #endregion
 
 #region Set log file settings

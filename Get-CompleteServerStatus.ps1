@@ -50,7 +50,7 @@ Import-Module ADExtensionModule -ErrorAction SilentlyContinue
 Import-Module LogFileModule -ErrorAction SilentlyContinue
 
 # Load settings from setting file
-Import-LocalizedData -FileName Settings.psd1 -BaseDirectory Settings -BindingVariable "ConfigFile"
+$ConfigFile = Import-PowerShellDataFile -LiteralPath "$PSScriptRoot\Settings\Settings.psd1"
 #endregion
 
 #region Configuration
