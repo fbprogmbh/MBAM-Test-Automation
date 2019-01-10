@@ -236,8 +236,23 @@ else {
     $selfService = '<li>SelfService Page <span class="rounded red"></span></li>' 
 }
 
+if (($allResults | Where-Object ID -eq "FBP-MBAM-0010" | Select-Object -ExpandProperty Passed) -eq "Passed") {
+    $coreService = '<li>Core Service <span class="rounded green"></span></li>'
+}
+else {
+    $coreService = '<li>Core Service <span class="rounded red"></span></li>' 
+}
 
-$statusbar = "<ul id=`"statusbar`" class=`"clearfix`"> "+$helpDesk + $selfService +"</ul>"
+if (($allResults | Where-Object ID -eq "FBP-MBAM-0009" | Select-Object -ExpandProperty Passed) -eq "Passed") {
+    $complianceService = '<li>Compliance Service <span class="rounded green"></span></li>'
+}
+else {
+    $complianceService = '<li>Compliance Service <span class="rounded red"></span></li>' 
+}
+
+
+
+$statusbar = "<ul id=`"statusbar`" class=`"clearfix`"> "+$helpDesk + $selfService + $coreService + $complianceService +"</ul>"
 #endregion
 
 
