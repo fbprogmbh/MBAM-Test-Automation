@@ -2184,11 +2184,11 @@ Param()
 
         Write-Verbose "[FBP-MBAM-0023]: Check if status was reported within valid frequency"  
         
-        if ($systemUpTime -lt $StatusReportDeadline)
+        if ($systemUpTime -lt $statusReportingFrequency)
         {
             # if system up time is lower than status report frequency
             # and status was reported
-            if($statusReportedTime -gt $StatusReportDeadline)
+            if($lastStatusReportTime -gt $StatusReportDeadline)
             {
                 # all good
                 $obj.Status = "Status reported at $statusReportedTime"
@@ -2205,9 +2205,9 @@ Param()
         {
             # if system up time is greater than status report frequency
             # and status was reported
-            if($statusReportedTime -gt $StatusReportDeadline)
+            if($lastStatusReportTime -gt $StatusReportDeadline)
             {
-                $obj.Status = "Status reported at $statusReportedTime"
+                $obj.Status = "Status reported at $lastStatusReportTime"
                 $obj.Passed = 1
             }
             # status was not reported and system up time exceeds report frequency
